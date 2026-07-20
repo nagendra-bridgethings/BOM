@@ -45,6 +45,20 @@ function pickComponent(obj) {
   return out
 }
 
+// Next serial number for a sub-board and next device-wide sort_order.
+// Read at save time so it's correct even for a device whose rows aren't loaded.
+export async function nextRowMeta(device, subBoard) {
+  const { components } = tablesFor(device)
+  const { data, error } = await supabase.from(components).select('s_no, sort_order, sub_board')
+  if (error) throw error
+  const rows = data || []
+  const maxSNo = rows
+    .filter((r) => r.sub_board === subBoard)
+    .reduce((m, r) => Math.max(m, Number(r.s_no) || 0), 0)
+  const maxOrder = rows.reduce((m, r) => Math.max(m, Number(r.sort_order) || 0), 0)
+  return { nextSNo: maxSNo + 1, nextSortOrder: maxOrder + 1 }
+}
+
 export async function insertComponent(device, payload) {
   const { components } = tablesFor(device)
   const { data, error } = await supabase

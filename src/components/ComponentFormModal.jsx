@@ -3,11 +3,11 @@ import Modal from './ui/Modal'
 import Combobox from './ui/Combobox'
 import { Field, TextInput, NumberInput, Button } from './ui/controls'
 import { IconChip } from './ui/icons'
-import { COMPONENT_TYPES, FIELD_META, valueFieldsFor } from '../lib/constants'
-import { insertComponent, updateComponent } from '../lib/db'
+import { COMPONENT_TYPES, DEVICES, DEVICE_SUB_BOARDS, FIELD_META, valueFieldsFor } from '../lib/constants'
+import { insertComponent, updateComponent, nextRowMeta } from '../lib/db'
 
 const EMPTY = {
-  sub_board: '', s_no: '', component: '', value: '', voltage: '', rating: '', material: '',
+  device: '', sub_board: '', component: '', value: '', voltage: '', rating: '', material: '',
   tolerance: '', label: '', package: '', part_number: '',
   opening_quantity: '', quantity_note: '',
 }
@@ -19,7 +19,10 @@ function buildValueRaw(form) {
   return parts.join(', ')
 }
 
-export default function ComponentFormModal({ open, onClose, onSaved, device, subBoard, subBoards = [], initial, options, nextSNoByBoard = {}, nextSortOrder }) {
+const selectCls =
+  'w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-base text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm'
+
+export default function ComponentFormModal({ open, onClose, onSaved, device, subBoard, initial, options }) {
   const isEdit = Boolean(initial)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -32,9 +35,8 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
     setOpeningBad(false)
     if (initial) {
       setForm({
+        device,
         sub_board: initial.sub_board ?? subBoard ?? '',
-        // load the raw serial so non-numeric S.No values ('32b') round-trip losslessly
-        s_no: initial.s_no_raw ?? (initial.s_no != null ? String(initial.s_no) : ''),
         component: initial.component ?? '',
         value: initial.value ?? '',
         voltage: initial.voltage ?? '',
@@ -48,8 +50,7 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
         quantity_note: initial.quantity_note ?? '',
       })
     } else {
-      const board = subBoard ?? ''
-      setForm({ ...EMPTY, s_no: nextSNoByBoard[board] ?? '', sub_board: board })
+      setForm({ ...EMPTY, device, sub_board: subBoard ?? '' })
     }
     // Seed only when the modal opens (or targets a different row) — reloads while
     // the modal is open must not wipe in-progress input.
@@ -62,24 +63,28 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
     const set = new Set([...(options?.component || []), ...COMPONENT_TYPES])
     return [...set].sort((a, b) => a.localeCompare(b))
   }, [options])
-  const subBoardOptions = useMemo(() => {
-    const opts = new Set(subBoards)
-    if (subBoard) opts.add(subBoard)
-    if (form.sub_board) opts.add(form.sub_board)
-    return [...opts]
-  }, [subBoards, subBoard, form.sub_board])
 
-  // Picking a different sub-board while adding refreshes the suggested S.No
-  // to that board's next number.
-  function onPickSubBoard(e) {
-    const b = e.target.value
-    setForm((f) => (isEdit ? { ...f, sub_board: b } : { ...f, sub_board: b, s_no: nextSNoByBoard[b] ?? '' }))
+  const subBoardOptions = useMemo(() => {
+    const opts = new Set(DEVICE_SUB_BOARDS[form.device] || [])
+    if (form.sub_board) opts.add(form.sub_board) // keep an existing row's board selectable
+    return [...opts]
+  }, [form.device, form.sub_board])
+
+  // Switching device switches the whole table the row lands in, so the
+  // sub-board has to move to one that device actually has.
+  function onPickDevice(e) {
+    const d = e.target.value
+    setForm((f) => ({ ...f, device: d, sub_board: (DEVICE_SUB_BOARDS[d] || [])[0] || '' }))
   }
 
   async function handleSave() {
     const compTrim = form.component.trim()
     if (!compTrim) {
       setError('Component type is required.')
+      return
+    }
+    if (!form.sub_board) {
+      setError('Select a sub-board.')
       return
     }
     const openingQty = form.opening_quantity === '' ? 0 : Number(form.opening_quantity)
@@ -92,15 +97,12 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
     // snap to the canonical option so 'capacitor'/'Capacitor ' don't create duplicates
     const component = componentOptions.find((o) => o.toLowerCase() === compTrim.toLowerCase()) || compTrim
     const parametric = valueFields.length > 1
-    const rawSNo = String(form.s_no ?? '').trim()
-    const targetBoard = form.sub_board || subBoard
-    // moving to another board re-appends the row there; plain edits keep their order
+    const targetDevice = form.device || device
+    const targetBoard = form.sub_board
     const boardChanged = isEdit && targetBoard !== initial.sub_board
+
     const payload = {
-      ...(!isEdit || boardChanged ? { sort_order: nextSortOrder ?? 0 } : {}),
       sub_board: targetBoard,
-      s_no: /^\d+$/.test(rawSNo) ? parseInt(rawSNo, 10) : null,
-      s_no_raw: rawSNo || null,
       component,
       value: (form.value || '').trim() || null,
       voltage: parametric ? (form.voltage || '').trim() || null : null,
@@ -114,10 +116,27 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
       opening_quantity: openingQty,
       quantity_note: (form.quantity_note || '').trim() || null,
     }
+
     try {
-      if (isEdit) await updateComponent(device, initial.id, payload)
-      else await insertComponent(device, payload)
-      await onSaved?.()
+      if (isEdit) {
+        // s_no / s_no_raw are omitted so an existing row keeps its serial;
+        // only a board move needs re-ordering to the end of the new board.
+        if (boardChanged) {
+          const { nextSNo, nextSortOrder } = await nextRowMeta(targetDevice, targetBoard)
+          payload.sort_order = nextSortOrder
+          payload.s_no = nextSNo
+          payload.s_no_raw = String(nextSNo)
+        }
+        await updateComponent(targetDevice, initial.id, payload)
+      } else {
+        // serial and position are assigned automatically from existing data
+        const { nextSNo, nextSortOrder } = await nextRowMeta(targetDevice, targetBoard)
+        payload.s_no = nextSNo
+        payload.s_no_raw = String(nextSNo)
+        payload.sort_order = nextSortOrder
+        await insertComponent(targetDevice, payload)
+      }
+      await onSaved?.(targetDevice, targetBoard)
       onClose?.()
     } catch (e) {
       setError(e.message || String(e))
@@ -134,7 +153,7 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
       maxWidth="max-w-2xl"
       icon={<IconChip />}
       title={isEdit ? 'Edit component' : 'Add component'}
-      subtitle={`${device} Water-Meter Board`}
+      subtitle={isEdit ? `${form.device} · ${form.sub_board}` : 'Choose the board it belongs to'}
       footer={
         <>
           <Button variant="soft" onClick={onClose} disabled={saving}>Cancel</Button>
@@ -146,21 +165,26 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
     >
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-12">
+          <Field
+            label="Device"
+            required
+            className="col-span-2 sm:col-span-3"
+            hint={isEdit ? 'Moving between devices isn’t supported' : undefined}
+          >
+            <select value={form.device} onChange={onPickDevice} disabled={isEdit} className={selectCls}>
+              {DEVICES.map((d) => (
+                <option key={d.key} value={d.key}>{d.label}</option>
+              ))}
+            </select>
+          </Field>
           <Field label="Sub-board" required className="col-span-2 sm:col-span-3">
-            <select
-              value={form.sub_board}
-              onChange={onPickSubBoard}
-              className="w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-base text-ink outline-none focus:border-primary sm:text-sm focus:ring-2 focus:ring-primary/25"
-            >
+            <select value={form.sub_board} onChange={set('sub_board')} className={selectCls}>
               {subBoardOptions.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
           </Field>
-          <Field label="S.No" className="col-span-2 sm:col-span-2">
-            <TextInput value={form.s_no} onChange={set('s_no')} placeholder="#" />
-          </Field>
-          <Field label="Component" required className="col-span-2 sm:col-span-4">
+          <Field label="Component" required className="col-span-2 sm:col-span-3">
             <Combobox value={form.component} onChange={set('component')} options={componentOptions} placeholder="e.g. Capacitor" />
           </Field>
           <Field label="Package (Type)" className="col-span-2 sm:col-span-3">
@@ -199,7 +223,7 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
         <div className="grid grid-cols-2 gap-4 rounded-xl bg-surface2 p-4 ring-1 ring-line">
           <Field
             label={isEdit ? 'Opening stock' : 'Opening stock (starting quantity)'}
-            hint={isEdit ? 'Base amount before inward/outward activity.' : undefined}
+            hint={isEdit ? 'Base amount before inward/outward activity.' : 'S.No is assigned automatically.'}
           >
             <NumberInput
               value={form.opening_quantity}

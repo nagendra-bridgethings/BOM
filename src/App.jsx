@@ -98,22 +98,6 @@ function Dashboard() {
     [components],
   )
   const typesPresent = options.component
-  // next auto serial number per sub-board (device-wide), so adding to a board
-  // other than the one currently viewed still numbers correctly
-  const nextSNoByBoard = useMemo(() => {
-    const m = {}
-    for (const r of rows) {
-      const b = r.sub_board || ''
-      m[b] = Math.max(m[b] || 0, Number(r.s_no) || 0)
-    }
-    for (const k of Object.keys(m)) m[k] += 1
-    return m
-  }, [rows])
-  // append new rows after every existing row in the device (keeps sub-board order)
-  const nextSortOrder = useMemo(
-    () => components.reduce((m, c) => Math.max(m, Number(c.sort_order) || 0), 0) + 1,
-    [components],
-  )
 
   const meta = deviceMeta(device)
 
@@ -134,6 +118,18 @@ function Dashboard() {
       })
       .filter((o) => o.remaining > 0) // fully-returned outwards can't take more returns
   }, [activeComp, txnsByComponent])
+
+  // A component can be added to any device, so jump the view to wherever it
+  // landed — otherwise the user saves and sees nothing change.
+  async function handleSaved(savedDevice, savedSubBoard) {
+    if (savedDevice && savedDevice !== device) {
+      if (savedSubBoard) setSubBoard(savedSubBoard)
+      setDevice(savedDevice) // useInventory reloads on device change
+      return
+    }
+    if (savedSubBoard && savedSubBoard !== subBoard) setSubBoard(savedSubBoard)
+    await reload()
+  }
 
   async function handleDelete(c) {
     if (!window.confirm(`Delete "${c.component} — ${c.value_raw || c.label || ''}" and all its transactions?`)) return
@@ -271,14 +267,11 @@ function Dashboard() {
       <ComponentFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        onSaved={reload}
+        onSaved={handleSaved}
         device={device}
         subBoard={subBoard}
-        subBoards={subBoards}
         initial={formInitial}
         options={options}
-        nextSNoByBoard={nextSNoByBoard}
-        nextSortOrder={nextSortOrder}
       />
 
       <TransactionModal

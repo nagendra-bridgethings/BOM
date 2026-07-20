@@ -22,6 +22,14 @@ export const tablesFor = (device) => DEVICE_TABLES[device] || DEVICE_TABLES['4G'
 // `sub_board` column inside each device's components table.
 export const SUB_BOARD_ORDER = ['Main Board', 'Mira Top Board', 'Reed Sensor', 'Read Sensor']
 
+// The sub-boards each device actually has — lets the Add form offer the right
+// choices for a device whose rows aren't currently loaded.
+export const DEVICE_SUB_BOARDS = {
+  '4G': ['Main Board', 'Mira Top Board'],
+  RS485: ['Main Board', 'Reed Sensor'],
+  LORA: ['Main Board', 'Read Sensor'],
+}
+
 export const orderSubBoards = (names) =>
   [...names].sort((a, b) => {
     const ia = SUB_BOARD_ORDER.indexOf(a)
