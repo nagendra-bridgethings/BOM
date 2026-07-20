@@ -72,22 +72,22 @@ export default function HistoryModal({ open, onClose, onChanged, device, compone
               const delta = txnDelta(t)
               return (
                 <li key={t.id} className="flex items-center gap-3 bg-surface px-4 py-3">
-                  <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg ring-1 ring-inset ${meta.tone}`}>
+                  <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ${meta.tone}`}>
                     {ICONS[t.type]}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="text-sm font-medium text-ink">{meta.label}</span>
-                      <span className="text-xs text-faint">{formatDate(t.txn_date)}</span>
+                      <span className="whitespace-nowrap text-xs text-faint">{formatDate(t.txn_date)}</span>
                       {t.type === 'outward' && t.qty_needed != null && (
-                        <span className="rounded bg-raise px-1.5 py-0.5 text-[11px] text-mute">
+                        <span className="whitespace-nowrap rounded bg-raise px-1.5 py-0.5 text-[11px] text-mute">
                           needed {formatNumber(t.qty_needed)}
                         </span>
                       )}
                     </div>
                     {t.reason && <p className="truncate text-xs text-mute">{t.reason}</p>}
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <div className={`text-sm font-semibold tabular-nums ${delta >= 0 ? 'text-teal' : 'text-coral'}`}>
                       {delta >= 0 ? '+' : '−'}{formatNumber(Math.abs(delta))}
                     </div>
@@ -96,7 +96,7 @@ export default function HistoryModal({ open, onClose, onChanged, device, compone
                   <button
                     onClick={() => handleDelete(t.id)}
                     disabled={busyId === t.id}
-                    className="rounded-lg p-1.5 text-faint transition hover:bg-coral/12 hover:text-coral disabled:opacity-50"
+                    className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg p-1.5 text-faint transition hover:bg-coral/12 hover:text-coral disabled:opacity-50 lg:min-h-0 lg:min-w-0"
                     title="Delete transaction"
                   >
                     <IconTrash width={15} height={15} />

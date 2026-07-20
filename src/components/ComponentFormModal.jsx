@@ -150,7 +150,7 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
             <select
               value={form.sub_board}
               onChange={onPickSubBoard}
-              className="w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              className="w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-base text-ink outline-none focus:border-primary sm:text-sm focus:ring-2 focus:ring-primary/25"
             >
               {subBoardOptions.map((b) => (
                 <option key={b} value={b}>{b}</option>

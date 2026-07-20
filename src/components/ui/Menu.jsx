@@ -76,7 +76,7 @@ export default function Menu({ items, label = 'More actions' }) {
         title={label}
         aria-label={label}
         onClick={toggle}
-        className={`rounded-md p-1.5 transition ${open ? 'bg-raise text-ink' : 'text-faint hover:bg-raise hover:text-ink'}`}
+        className={`inline-flex min-h-9 min-w-9 items-center justify-center rounded-md p-1.5 transition lg:min-h-0 lg:min-w-0 ${open ? 'bg-raise text-ink' : 'text-faint hover:bg-raise hover:text-ink'}`}
       >
         <IconDots width={16} height={16} />
       </button>

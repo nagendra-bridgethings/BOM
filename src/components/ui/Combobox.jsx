@@ -84,8 +84,11 @@ export default function Combobox({
             setActive(-1)
           }}
           onFocus={() => setOpen(true)}
+          // onFocus alone won't fire if the input is already focused — on touch
+          // that leaves no way to reopen the list after picking/closing it
+          onClick={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full rounded-lg border border-line bg-surface2 py-2 pl-3 pr-8 text-sm text-ink outline-none transition placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg border border-line bg-surface2 py-2 pl-3 pr-8 text-base text-ink sm:text-sm outline-none transition placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <button
           type="button"

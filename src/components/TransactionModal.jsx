@@ -125,7 +125,7 @@ export default function TransactionModal({ open, onClose, onSaved, device, mode,
             <select
               value={relatedId}
               onChange={(e) => onPickOutward(e.target.value)}
-              className="w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              className="w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-base text-ink outline-none focus:border-primary sm:text-sm focus:ring-2 focus:ring-primary/25"
             >
               <option value="" disabled>Select an outward…</option>
               {openOutwards.map((o) => (

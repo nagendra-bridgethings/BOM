@@ -15,7 +15,7 @@ export default function Toolbar({
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Search component, value, label, part no…"
-          className="w-full rounded-lg border border-line bg-surface2 py-2 pl-9 pr-3 text-sm text-ink  outline-none transition placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/25"
+          className="w-full rounded-lg border border-line bg-surface2 py-2 pl-9 pr-3 text-base text-ink outline-none sm:text-sm transition placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
       </div>
 
@@ -26,7 +26,7 @@ export default function Toolbar({
         <select
           value={typeFilter}
           onChange={(e) => onTypeFilter(e.target.value)}
-          className="appearance-none rounded-lg border border-line bg-surface2 py-2 pl-8 pr-8 text-sm text-mute  outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+          className="appearance-none rounded-lg border border-line bg-surface2 py-2 pl-8 pr-8 text-base text-mute outline-none sm:text-sm focus:border-primary focus:ring-2 focus:ring-primary/25"
         >
           <option value="">All components</option>
           {types.map((t) => (
@@ -52,7 +52,7 @@ export default function Toolbar({
       <button
         onClick={onRefresh}
         title="Refresh"
-        className="rounded-lg border border-line bg-surface2 p-2 text-faint  transition hover:bg-raise hover:text-ink"
+        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-line bg-surface2 p-2 text-faint transition hover:bg-raise hover:text-ink lg:min-h-0 lg:min-w-0"
       >
         <IconRefresh className={loading ? 'animate-spin' : ''} />
       </button>

@@ -172,19 +172,21 @@ function Dashboard() {
           </div>
 
           {/* Device tabs — underline indicator */}
-          <div className="flex gap-6">
+          {/* negative margin keeps the first tab flush with the header gutter
+              while the padding turns the gaps into real tap area */}
+          <div className="-mx-3 flex gap-1">
             {DEVICES.map((d) => {
               const active = d.key === device
               return (
                 <button
                   key={d.key}
                   onClick={() => setDevice(d.key)}
-                  className={`relative pb-3 pt-1 text-sm font-semibold transition ${
+                  className={`relative px-3 pb-3 pt-1 text-sm font-semibold transition ${
                     active ? 'text-ink' : 'text-faint hover:text-mute'
                   }`}
                 >
                   {d.label}
-                  {active && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" />}
+                  {active && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />}
                 </button>
               )
             })}
