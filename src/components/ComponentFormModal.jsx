@@ -3,7 +3,8 @@ import Modal from './ui/Modal'
 import Combobox from './ui/Combobox'
 import { Field, TextInput, NumberInput, Button } from './ui/controls'
 import { IconChip } from './ui/icons'
-import { COMPONENT_TYPES, DEVICES, DEVICE_SUB_BOARDS, FIELD_META, valueFieldsFor } from '../lib/constants'
+import { COMPONENT_TYPES, DEVICES, DEVICE_SUB_BOARDS, FIELD_META, MAX_QTY, valueFieldsFor } from '../lib/constants'
+import { formatNumber } from '../lib/format'
 import { insertComponent, updateComponent, nextRowMeta } from '../lib/db'
 
 const EMPTY = {
@@ -92,6 +93,10 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
       setError('Opening stock is not a valid number — please re-enter it.')
       return
     }
+    if (openingQty > MAX_QTY) {
+      setError(`Opening stock is too large — enter ${formatNumber(MAX_QTY)} or less.`)
+      return
+    }
     setSaving(true)
     setError(null)
     // snap to the canonical option so 'capacitor'/'Capacitor ' don't create duplicates
@@ -109,13 +114,21 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
       rating: parametric ? (form.rating || '').trim() || null : null,
       material: parametric ? (form.material || '').trim() || null : null,
       tolerance: parametric ? (form.tolerance || '').trim() || null : null,
-      value_raw: buildValueRaw(form) || null,
       label: (form.label || '').trim() || null,
       package: (form.package || '').trim() || null,
       part_number: (form.part_number || '').trim() || null,
       opening_quantity: openingQty,
       quantity_note: (form.quantity_note || '').trim() || null,
     }
+
+    // value_raw is the original spec cell and often holds detail no column parsed
+    // out (an ESR figure, a vendor part no.) that buildValueRaw can't rebuild, so
+    // re-derive it only when a parsed sub-field actually differs — comparing the
+    // derived string rewrites even on a no-op combobox re-commit. Omitting the key
+    // leaves the column alone, since pickComponent copies only what's present.
+    const writeValueRaw =
+      !isEdit || valueFields.some((f) => (form[f] || '').trim() !== (initial[f] ?? '').trim())
+    if (writeValueRaw) payload.value_raw = buildValueRaw(form) || null
 
     try {
       if (isEdit) {

@@ -5,6 +5,7 @@ import { useInventory } from './hooks/useInventory'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber } from './lib/format'
 
+import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
 import Toolbar from './components/Toolbar'
 import ComponentTable from './components/ComponentTable'
@@ -191,76 +192,82 @@ function Dashboard() {
       </header>
 
       <main className="mx-auto w-full px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        {!onCurrentDevice && error ? (
-          <ErrorCard title="Couldn’t load data" message={error} />
-        ) : !onCurrentDevice ? (
-          <div className="py-24 text-center text-sm text-faint">Loading {device}…</div>
-        ) : !hasData ? (
-          <ErrorCard
-            title="No data yet"
-            message="Your database is connected but this device has no components. Run supabase/schema.sql then supabase/seed.sql in the Supabase SQL Editor (or `node scripts/seed-api.mjs`), then refresh."
-          />
-        ) : (
-          <>
-            {/* Board heading + sub-board segmented control */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-ink">{meta.blurb}</h2>
-                <span className="text-sm tabular-nums text-faint">{formatNumber(boardRows.length)} components</span>
-              </div>
-              {subBoards.length > 1 && (
-                <div className="inline-flex divide-x divide-line overflow-hidden rounded-lg ring-1 ring-line">
-                  {subBoards.map((b) => (
-                    <button
-                      key={b}
-                      onClick={() => setSubBoard(b)}
-                      className={`px-3.5 py-1.5 text-sm font-medium transition ${
-                        b === subBoard ? 'bg-surface2 text-ink' : 'bg-surface text-mute hover:bg-surface2/60 hover:text-ink'
-                      }`}
-                    >
-                      {b}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Toolbar */}
-            <div className="mt-5">
-              <Toolbar
-                search={search}
-                onSearch={setSearch}
-                typeFilter={typeFilter}
-                onTypeFilter={setTypeFilter}
-                types={typesPresent}
-                lowOnly={lowOnly}
-                onToggleLow={() => setLowOnly((v) => !v)}
-                onAdd={() => { setFormInitial(null); setFormOpen(true) }}
-                onRefresh={reload}
-                loading={loading}
-              />
-            </div>
-
-            {/* Result count */}
-            <div className="mt-4 mb-2 flex items-center justify-between text-xs text-faint">
-              <span>
-                Showing <span className="font-semibold text-mute">{filtered.length}</span> of {boardRows.length}
-                {subBoard ? ` · ${subBoard}` : ''}
-              </span>
-              {error && <span className="text-coral">{error}</span>}
-            </div>
-
-            <ComponentTable
-              rows={filtered}
-              onInward={(c) => setTxnState({ mode: 'inward', component: c })}
-              onOutward={(c) => setTxnState({ mode: 'outward', component: c })}
-              onReturn={(c) => setTxnState({ mode: 'return', component: c })}
-              onHistory={(c) => setHistoryComp(c)}
-              onEdit={(c) => { setFormInitial(c); setFormOpen(true) }}
-              onDelete={handleDelete}
+        {/* Only the content area is inside this boundary, so a crash in one device's
+            data leaves the header and device tabs clickable. Keying it on `device`
+            makes switching device remount a fresh boundary — without that, the crashed
+            state would persist and keep showing the fallback on a device that renders fine. */}
+        <ErrorBoundary key={device} nested>
+          {!onCurrentDevice && error ? (
+            <ErrorCard title="Couldn’t load data" message={error} />
+          ) : !onCurrentDevice ? (
+            <div className="py-24 text-center text-sm text-faint">Loading {device}…</div>
+          ) : !hasData ? (
+            <ErrorCard
+              title="No data yet"
+              message="Your database is connected but this device has no components. Run supabase/schema.sql then supabase/seed.sql in the Supabase SQL Editor (or `node scripts/seed-api.mjs`), then refresh."
             />
-          </>
-        )}
+          ) : (
+            <>
+              {/* Board heading + sub-board segmented control */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-base font-semibold text-ink">{meta.blurb}</h2>
+                  <span className="text-sm tabular-nums text-faint">{formatNumber(boardRows.length)} components</span>
+                </div>
+                {subBoards.length > 1 && (
+                  <div className="inline-flex divide-x divide-line overflow-hidden rounded-lg ring-1 ring-line">
+                    {subBoards.map((b) => (
+                      <button
+                        key={b}
+                        onClick={() => setSubBoard(b)}
+                        className={`px-3.5 py-1.5 text-sm font-medium transition ${
+                          b === subBoard ? 'bg-surface2 text-ink' : 'bg-surface text-mute hover:bg-surface2/60 hover:text-ink'
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Toolbar */}
+              <div className="mt-5">
+                <Toolbar
+                  search={search}
+                  onSearch={setSearch}
+                  typeFilter={typeFilter}
+                  onTypeFilter={setTypeFilter}
+                  types={typesPresent}
+                  lowOnly={lowOnly}
+                  onToggleLow={() => setLowOnly((v) => !v)}
+                  onAdd={() => { setFormInitial(null); setFormOpen(true) }}
+                  onRefresh={reload}
+                  loading={loading}
+                />
+              </div>
+
+              {/* Result count */}
+              <div className="mt-4 mb-2 flex items-center justify-between text-xs text-faint">
+                <span>
+                  Showing <span className="font-semibold text-mute">{filtered.length}</span> of {boardRows.length}
+                  {subBoard ? ` · ${subBoard}` : ''}
+                </span>
+                {error && <span className="text-coral">{error}</span>}
+              </div>
+
+              <ComponentTable
+                rows={filtered}
+                onInward={(c) => setTxnState({ mode: 'inward', component: c })}
+                onOutward={(c) => setTxnState({ mode: 'outward', component: c })}
+                onReturn={(c) => setTxnState({ mode: 'return', component: c })}
+                onHistory={(c) => setHistoryComp(c)}
+                onEdit={(c) => { setFormInitial(c); setFormOpen(true) }}
+                onDelete={handleDelete}
+              />
+            </>
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Modals */}

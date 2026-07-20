@@ -112,6 +112,13 @@ export function valueFieldsFor(component) {
 
 export const LOW_STOCK_THRESHOLD = 200
 
+// Ceiling for every quantity the app accepts. Generous for real component stock
+// (whole reels run to tens of thousands) yet far below Number.MAX_SAFE_INTEGER,
+// so nothing that clears it can reach the numeric column already rounded.
+// Number.isFinite alone isn't enough — a pasted 1e30 is finite and would corrupt
+// the running balance permanently.
+export const MAX_QTY = 10000000
+
 export const TXN_META = {
   inward: {
     label: 'Inward',
