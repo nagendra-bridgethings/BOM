@@ -156,18 +156,18 @@ function Dashboard() {
       <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               {/* BASE_URL keeps the logo resolving under a subpath deploy (e.g. /BOM/) */}
-              <img src={`${import.meta.env.BASE_URL}BridgeThings.png`} alt="BridgeThings" className="h-8 w-auto" />
-              <span className="h-8 w-px bg-line" />
-              <div>
+              <img src={`${import.meta.env.BASE_URL}BridgeThings.png`} alt="BridgeThings" className="h-7 w-auto shrink-0 sm:h-8" />
+              <span className="h-8 w-px shrink-0 bg-line" />
+              <div className="min-w-0">
                 <h1 className="text-lg font-semibold leading-tight text-ink">BOM</h1>
-                <p className="text-xs text-mute">Water Meter Board Inventory</p>
+                <p className="truncate text-xs text-mute">Water Meter Board Inventory</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 text-xs font-medium text-mute">
+            <div className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-mute">
               <span className="h-1.5 w-1.5 rounded-full bg-faint" />
-              Supabase connected
+              <span className="hidden sm:inline">Supabase connected</span>
             </div>
           </div>
 

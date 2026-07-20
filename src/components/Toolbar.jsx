@@ -7,7 +7,7 @@ export default function Toolbar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      <div className="relative min-w-[220px] flex-1">
+      <div className="relative w-full min-w-[180px] flex-1 sm:w-auto">
         <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-faint">
           <IconSearch />
         </span>
@@ -57,7 +57,7 @@ export default function Toolbar({
         <IconRefresh className={loading ? 'animate-spin' : ''} />
       </button>
 
-      <Button variant="primary" onClick={onAdd} className="">
+      <Button variant="primary" onClick={onAdd} className="ml-auto sm:ml-0">
         <IconPlus /> Add component
       </Button>
     </div>
