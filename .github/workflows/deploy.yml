@@ -29,7 +29,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      # `npm install`, not `npm ci`: the lockfile is generated on Windows, which
+      # never resolves the WASM fallback branch (@napi-rs/wasm-runtime ->
+      # @emnapi/core, @emnapi/runtime). Those entries are therefore absent from
+      # the lockfile and `npm ci`'s exact-sync check fails on Linux.
+      - run: npm install --no-audit --no-fund
 
       - name: Build
         env:
