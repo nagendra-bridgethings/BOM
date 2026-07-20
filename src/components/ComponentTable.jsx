@@ -111,7 +111,6 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
               <th className={`${th} w-14 border-l-2 border-l-transparent`}>#</th>
               <th className={th}>Component</th>
               <th className={th}>Value</th>
-              <th className={`${th} hidden 2xl:table-cell`}>Label</th>
               <th className={th}>Package</th>
               <th className={th}>Part No.</th>
               <th className={`${th} text-right`}>In Hand</th>
@@ -136,9 +135,6 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
                         ))}
                       </div>
                     )}
-                  </td>
-                  <td className={`${td} hidden max-w-[180px] 2xl:table-cell`}>
-                    <span className="break-words text-xs text-mute">{c.label || '—'}</span>
                   </td>
                   <td className={td}>
                     <span className="rounded bg-surface2 px-1.5 py-0.5 font-mono text-[11px] text-ink/80 ring-1 ring-line2">{c.package || '—'}</span>
