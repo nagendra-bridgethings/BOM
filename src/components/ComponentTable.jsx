@@ -123,8 +123,13 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
               return (
                 <tr key={c.id} className="transition hover:bg-surface2/70">
                   <td className={`${td} ${stripeFor(c)} tabular-nums text-faint`}>{c.s_no ?? c.s_no_raw ?? '—'}</td>
-                  <td className={td}>
+                  <td className={`${td} max-w-[230px]`}>
                     <div className="font-semibold text-ink">{c.component || '—'}</div>
+                    {/* designators live here rather than in their own column —
+                        the comma-lists were what forced the table off-screen */}
+                    {c.label && (
+                      <div className="truncate text-[11px] text-mute" title={c.label}>{c.label}</div>
+                    )}
                   </td>
                   <td className={`${td} max-w-[240px]`}>
                     <div className="font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
