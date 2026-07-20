@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* ---- Surfaces & ink (light, cool-neutral bias) ---- */
+  --color-canvas: #f4f6f9;   /* page background          */
+  --color-surface: #ffffff;  /* cards, header, table      */
+  --color-surface2: #f1f4f8; /* thead, wells, inputs      */
+  --color-raise: #e9edf2;    /* hover / active track      */
+  --color-line: #e3e8ee;     /* hairline borders          */
+  --color-line2: #edf0f4;    /* softer dividers           */
+  --color-ink: #1b2735;      /* primary text (navy-black) */
+  --color-mute: #56646f;     /* secondary text            */
+  --color-faint: #8593a0;    /* tertiary text / labels    */
+
+  /* ---- UI accent = brand navy; colour is reserved for data ---- */
+  --color-primary: #26384a;
+  --color-primary-600: #1b2938;
+
+  /* ---- Semantic data signals (only on stock, never chrome) ---- */
+  --color-teal: #0b7d6c;     /* healthy / inward          */
+  --color-coral: #c33f2c;    /* depleted / issue / danger */
+  --color-sun: #a06600;      /* low stock / warning       */
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f4f6f9;
+  color: #1b2735;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Thin, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c7d0da transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #c7d0da;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #a6b3c0;
+}
+
+/* Fade/scale-in used by modals + menus */
+@keyframes bom-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bom-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bom-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bom-fade-in { animation: bom-fade-in 0.15s ease-out; }
+.bom-pop-in { animation: bom-pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+.bom-menu-in { animation: bom-menu-in 0.12s cubic-bezier(0.16, 1, 0.3, 1); }

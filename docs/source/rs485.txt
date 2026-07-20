@@ -1,0 +1,73 @@
+DEVICE: RS485-Water Meter Board
+Columns: SNO | COMPONENT | VALUE | PART_NUMBER | LABEL | TYPE(package) | QTY_IN_HAND
+Notes: empty cell = blank in PDF. "NC" = as printed. Blank PART_NUMBER often means the cell was highlighted red (part not finalized).
+
+=== SECTION: MAIN BOARD ===
+1 | Capacitor | 100nF, 50V, X5R, 10% | C14663 | C1,C5,C8,C9,C33,C41 | C0603 | 1755
+2 | Capacitor | 2.2uF, 50V, X7R, 10% | C125847 | C2 | C0805 | 1475
+3 | Capacitor | 10uF, 25V, X5R, 10% | | C3,C4,C25,C26 | C0805 |
+4 | Capacitor | 1uF,10V,X7R,10% | | C6,C7,C21 | C0603 | 200
+5 | Capacitor | 100nF, 10V, X7R, 10% | C309458 | C10,C15,C18,C20,C22,C31,C32 | C0402 | 3846
+6 | Capacitor | 12pF, 5%, 50V, COG | C76948 | C23,C24 | C0402 | 1890
+7 | Capacitor | 18pF, 50V COG ±10% | C161534 | C12,C19 | C0402 | 1600
+8 | Capacitor | 10uF,10V,X7R,10% | C2959727 | C14 | C0603 | 355
+9 | Capacitor | 10nF, 16V, X7R, 10% | C327009 | C16 | C0402 | 2255
+10 | Capacitor | 2.2uF, 10V, X7R, 10% | C3905270 | C17 | C0603 | 1880
+11 | Capacitor | 1000pF,50V,1%,COG | C326587 | C28,C29 | C0805 | 185
+12 | Capacitor | 22uF,10V,X7R,10% | | C30 | 1206 | 1805
+13 | Resistor | 115K,100mW, ±50ppm/℃ 1% | C137806 | R1 | R0603 | 2800
+14 | Resistor | 22.1K,100mW, ±50ppm/℃ 1% | C25961 | R2 | R0603 | 1638
+15 | Resistor | 470K,100mW, ±50ppm/℃ 1% | C114622 | R3 | R0603 | 5035
+16 | Resistor | 1K,62.5mW,±100ppm/℃ ±5% | C106235 | R4 | R0402 | 4500
+17 | Resistor | 1K,62.5mW,±100ppm/℃ ±5% | | R38 | R0402 |
+18 | Resistor | 10M,125mW,±100ppm/℃ ±5% | C114525 | R5 | R0805 | 1742
+19 | Resistor | 330e, 125mW, ±25ppm/℃ ±1% | C105878 | R6,R7 | R0805 | 3943
+20 | Resistor | 15K, 100mW, 75V ±100ppm/℃ ±1% | C22809 | R8 | R0603 | 195
+21 | Resistor | 10K, 100mW, ±100ppm/℃ ±1% | C98220 | R9,R10,R11,R18,R19,R22,R30 | R0603 | 12115
+22 | Resistor | 10E,125mW ±1% | | R12,R13 | R0805 | 7030
+23 | Resistor | 4.7K,125mW ±1% | C60816 | R14,R16 | R0805 | 3156
+24 | Resistor | 50K/51k, 100mW, 75V ±100ppm/℃ ±1% | C98220 | R15 | R0603 | 4735
+25 | Resistor | 120E,125mW ±1% | | R17 | R0805 |
+26 | Resistor | 1K,100mW, ±50ppm/℃ ±5% | C25585 | R20 | R0603 | 2438
+27 | Resistor | 1M, 100mW ±100ppm/℃ ±5% | C26098 | R21 | R0603 | 4700
+28 | Resistor | 0E, 100mW ±5% | C95177 | R23 | R0603 | 1630
+29 | Resistor | NC | | R24 | R0402 |
+30 | Resistor | NC | | R25 | R0805 |
+31 | Diode | 36V | | D6 | SMD |
+32 | Ferrite Bead | MMZ1608S102ATA00 - 500mΩ ±25% 1kΩ@100MHz | C307763 | FB1 | L0603 | 680
+33 | Inductor | 10uH - 74404054100 | C540965 | L1 | INDSMD_L5.8-W5.2_SCD0503T | 961
+34 | Inductor | 120mA 10uH ±10% | C92906 | L2 | L0805 | 600
+35 | Transistor | DMG1016UDW-7 | C211433 | Q1 | SOT-363_L2.0-W1.3-P0.65-LS2.1-BR | 1025
+36 | MOSFET-PCHANNEL | A03415(or) DMP2035 | | Q3,Q7 | SOT23-3 |
+37 | Transistor | MMBT3904Q | | U8 | SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR | 116
+38 | Isolator | MPB0505S | C7465178 | REG_ISO1 | ISOLATOR | 1100
+39 | Regulator | AP64060Q | C6500862 | U1 | TSOT26 | 1861
+40 | RS485 | ISO3082DWRG4 | C21710 | U2 | SOIC-16_L10.3-W7.5-P1.27-LS10.3-BL | 1127
+41 | Regulator | AZ1117 | C460428 | U3 | SOT-89(SOT89-3) | 1079
+42 | Micro Controller | EFM32ZG210F32-QFN32T | | U4 | QFN-32_L6.0-W6.0-P0.65-BL-EP4.4 | 726
+43 | IC | MAX35101 / MAX35103 | | U5 | TQFP32-5MM | 28
+44 | Display | SML08247 | | U6 | SML08247 |
+45 | Display IC | HT1621B_C7532 | C7532 | U7 | LQFP-48_L7.0-W7.0-P0.50-LS9.0-BL |
+46 | FRAM | MB85RC04V (or) FM24CL04B-GTR | | U9 | SOIC-8_L5.0-W4.0-P1.27-LS6.0-BL | 1000
+47 | Ambient Light Sensor | SLPT1206AC-LB1 | | U10 | OPTOSMD_L3.2-W1.6-RD |
+48 | Crystal | 4.000Mhz,18pF (887-2462-1-ND) | C5355502 | X1 | CRYSTALSMD_3P-L11.4-W4.7-LS12.7 | 376
+49 | Crystal | 32.768khz,12.5pF (300-8879-1-ND) | C7209148 | Y2 | 3.2X1.5MM | 1752
+50 | Connectors | 4 PIN JST | | RS485 | HDR-F-2.54_1X3 |
+51 | Connectors | 4 PIN JST | | RS485-1 | HDR-F-2.54_1X4 | 368
+52 | Connectors | 2 PIN JST | | RTD | JST-XH 1X2 STREIGHT |
+53 | Connectors | Burg Pins | | LOADING1 | HDR-TH_6P-P2.54-V-R2-C3-S2.54 |
+54 | Connectors | Burg Pins | | HALL | HDR-F-2.54_1X3 |
+55 | Connectors | Burg Pins | | J1,J2,J3 | HDR-M-2.54_1X2 |
+56 | Connectors | Screw Terminal | | DOWN,UP | CONNTH_2P-P5.00 | 1473
+57 | Connectors | 2 PIN JST | | BAT-IN | JST-XH 1X2 STREIGHT | 1415
+58 | Sample PCB | - | - | - | - | -
+59 | Bare PCBs | - | - | | | -
+
+=== SECTION: REED SENSOR BOARD ===
+Columns: SNO | COMPONENT | VALUE | PART_NUMBER | LABEL | TYPE(package) | QTY_IN_HAND
+1 | Hall Sensor | DRV5032 | C2655033 | U10 | SOT-23-3 | 1520
+2 | Diode | 1N4148 | C444720 | D3 | SOD-123F | 1032
+3 | Resistor | 10K,62.5mW,±100ppm/℃ ±5% | | R3 | R0603 |
+4 | Header | HDR-M-2.54_1x3 | | HALL | HDR-M-2.54_1X3 |
+5 | Header | HDR-F-2.54_1x2 | | J1,J2,J3 | HDR-F-2.54_1X2 |
+6 | PCB | | | | |

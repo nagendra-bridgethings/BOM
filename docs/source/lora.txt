@@ -1,0 +1,66 @@
+DEVICE: LORA-Water Meter Board
+Columns: SNO | COMPONENT | VALUE | PART_NUMBER | LABEL | TYPE(package) | QTY_IN_HAND
+Notes: empty cell = blank in PDF. "NC" = as printed. A blank PART_NUMBER often means the cell was highlighted red (part not finalized).
+
+=== SECTION: MAIN BOARD ===
+1 | Capacitor | 1uF,16V,X7R,10% | C28323 | C1 | C0805 | 200
+2 | Capacitor | 10uF,10V,X7R,10% | C32635 | C3,C6 | C0805 |
+3 | Capacitor | 7pF,NPO,50V,1% | C260628 | C4,C5,C25,C26 | C0402 | 2900
+4 | Capacitor | 100nF,16V,X7R,10% | | C2,C8 | C0402 | NC
+5 | Capacitor | 100nF,16V,X7R,10% | C60474 | C9,C10,C15,C18,C20,C22,C31,C32 | C0402 | 3910
+6 | Capacitor | 12pF, 5%, 50V, COG | C76948 | C23,C24 | C0402 |
+7 | Capacitor | 18pF, 5%, 50V, COG | C33149 | C12,C19 | C0403 | 1850
+8 | Capacitor | 10nF, 16V, X7R, 10% | C327009 | C16 | C0402 |
+9 | Capacitor | 100nF,16V,X7R,10% | C14663 | C17,C33 | C0603 |
+10 | Capacitor | 1uF,16V,X7R,10% | C59782 | C21 | C0603 |
+11 | Capacitor | 1nF,50V,1%,COG | C326587 | C28,C29 | C0805 | 1900
+12 | Capacitor | 22uF,10V,X7R,10% | C87996 | C30 | C1206 | 193
+13 | Capacitor | 0E,50V ±100ppm/℃ ±1% | C106231 | R14 | R0402 | 1450
+14 | Resistor | 10kΩ,50V ±100ppm/℃ ±1% | C60490 | R2,R3,R10,R12,R13,R17,R18 | R0402 | 943
+15 | Resistor | 0E,50V ±100ppm/℃ ±1% | | R4,R24,R25 | R0402 | NC
+16 | Resistor | 10MΩ,50V ±100ppm/℃ ±1% | C138067 | R5 | R0402 | 426
+17 | Resistor | 330e,125mW,150V ±25ppm/℃ ±1% | C105878 | R6,R7 | R0805 | 1895
+18 | Resistor | 15K,100mW,75V ±100ppm/℃ ±1% | C22809 | R8 | R0603 | 1420
+19 | Resistor | 10kΩ,50V ±100ppm/℃ ±1% | C98220 | R9 | R0603 | 8500
+20 | Resistor | 51k,100mW,75V ±100ppm/℃ ±1% | C23196 | R15 | R0603 | 430
+21 | Resistor | 1kΩ,50V ±100ppm/℃ ±1% | C106235 | R20 | R0402 | 500
+22 | Resistor | 1kΩ,50V ±100ppm/℃ ±1% | | R38 | R0403 | NC
+23 | Resistor | 1MΩ,50V ±100ppm/℃ ±1% | C105578 | R21 | R0603 | 500
+24 | Resistor | 1MΩ,50V ±100ppm/℃ ±1% | C138033 | R32 | R0402 | 1880
+25 | Ferrite Bead | MMZ1608S102ATA00 - 500mΩ ±25% 1kΩ@100MHz | C307763 | FB1 | L0603 | 1000
+26 | Inductor | 10uH ±10%,120mA | C92906 | L2 | L0805 |
+27 | Inductor | 3nH 750mA | | L5 | C0402 | NC
+28 | Mosfet | AO3415 | C840839 | Q3,Q5 | SOT23-3 |
+29 | Rak Module | RAK3172 (EU868, WITHOUT IPEX) 305045 | | U1 | LCC40_L15.6-W15.0-P1.00_RAK3172 |
+30 | Antenna | LoRa Antenna | | U2 | LORA_ANTENNA | NC
+31 | Micro Controller | EFM32ZG210F32-QFN32T | | U4 | QFN-32_L6.0-W6.0-P0.65-BL-EP4.4 |
+32 | IC | MAX35103 | MAX35103EHJ+T | U5 | TQFP32-5MM |
+33 | Display | SML08247 | | U6 | SML08247 |
+34 | Display IC | HT1621B_C7532 | C7532 | U7 | LQFP48_L7.0-W7.0-P0.50-LS9.0-BL | 925
+35 | RTC | BM8563ESA | C269877 | U8 | SOP-8_L4.9-W3.9-P1.27-LS6.0-BL | 550
+(no S.No) | FRAM | MB85C04V | 865-MB85C04VPNF-GAMERE2CT-ND | U9 | SMD |
+36 | Ambient Sensor | SLPT1206AC-LB1 | | U10 | OPTOSMD_L3.2-W1.6-RD | NC
+37 | CRYSTAL | 4.000Mhz,18pF (887-2462-1-ND) | C7209148 | X1 | CRYSTALSMD_3PL11.4-W4.7-LS12.7 | 970
+38 | CRYSTAL | 32.768khz,7pF (300-8879-1-ND) | C99009 | X3,X4 | CRYSTALSMD_L2.0-W1.2 |
+39 | CRYSTAL | 32.768khz,12pF (300-8879-1-ND) | C32346 | Y2 | 3.2X1.5MM |
+40 | Calibration Switch | MK-12C02-G015 | C2911519 | CAL-INT | SW-SMD_GSWITCH_MK-12C02-G015 | 617
+41 | JST Connector | 2-PIN | C22751786 | BAT-IN | JST-XH 1X2 STREIGHT | 350
+42 | Burg Pins | 2-PIN | | BOOT | HDR-F-2.54_1X2 | NC
+43 | Burg Pins | 3-PIN | | HALL | HDR-F-2.54_1X3 |
+44 | Screw Terminal | 2-PIN | | DOWN,UP | CONNTH_2P-P5.00 | 909
+45 | Burg Pins | 2-PIN | | J1,J2 | HDR-M2.54_1X2 | NC
+46 | Burg Pins | 2-PIN | | J4,J5 | HDR-M2.54_1X3 | NC
+47 | Burg Pins | 2/3-PIN | | LOADING | HDR-M2.54_2X3 | NC
+48 | Burg Pins | 4-PIN | | SPI | HDR-M-2.54_1X4 | NC
+49 | Burg Pins | 5-PIN | | UART | HDR-F-2.54_1X5 | NC
+50 | Sample Board | - | - | - | - | -
+51 | Bare PCBs | - | - | - | - | -
+
+=== SECTION: READ SENSOR BOARD ===
+Columns: ID | COMPONENT | VALUE | PART_NUMBER | LABEL | TYPE(package) | QTY_ON_BOARD
+1 | Hall Sensor | DRV5032 | | U10 | SOT-23-3 |
+2 | Diode | 1N4148 | C2655033 | D3 | SOD-123F |
+3 | Resistor | 10K,62.5mW,±100ppm/℃ ±5% | | R3 | R0603 |
+4 | Header | HDR-M-2.54_1x3 | C84367 | HALL | HDR-M-2.54_1X3 |
+5 | Header | HDR-F-2.54_1x2 | | J1,J2,J3 | HDR-F-2.54_1X2 | NC
+6 | BARE PCB | | | | |
