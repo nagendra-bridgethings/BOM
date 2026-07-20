@@ -52,7 +52,7 @@ export default function Toolbar({
       <button
         onClick={onRefresh}
         title="Refresh"
-        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-line bg-surface2 p-2 text-faint transition hover:bg-raise hover:text-ink xl:min-h-0 xl:min-w-0"
+        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-line bg-surface2 p-2 text-faint transition hover:bg-raise hover:text-ink 2xl:min-h-0 2xl:min-w-0"
       >
         <IconRefresh className={loading ? 'animate-spin' : ''} />
       </button>

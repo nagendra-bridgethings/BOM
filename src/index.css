@@ -4,6 +4,14 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
 
+  /* Breakpoints in px, not rem: rem-based ones shift with the browser's
+     font-size setting, so the layout could switch at the wrong real width. */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
   /* ---- Surfaces & ink (light, cool-neutral bias) ---- */
   --color-canvas: #f4f6f9;   /* page background          */
   --color-surface: #ffffff;  /* cards, header, table      */
@@ -37,6 +45,9 @@ body,
 
 body {
   margin: 0;
+  /* clip (not hidden) — never allow a sideways page scroll, while keeping
+     position:sticky working on the header */
+  overflow-x: clip;
   background-color: #f4f6f9;
   color: #1b2735;
   -webkit-font-smoothing: antialiased;

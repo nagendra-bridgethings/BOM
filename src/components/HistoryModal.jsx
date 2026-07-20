@@ -96,7 +96,7 @@ export default function HistoryModal({ open, onClose, onChanged, device, compone
                   <button
                     onClick={() => handleDelete(t.id)}
                     disabled={busyId === t.id}
-                    className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg p-1.5 text-faint transition hover:bg-coral/12 hover:text-coral disabled:opacity-50 xl:min-h-0 xl:min-w-0"
+                    className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg p-1.5 text-faint transition hover:bg-coral/12 hover:text-coral disabled:opacity-50 2xl:min-h-0 2xl:min-w-0"
                     title="Delete transaction"
                   >
                     <IconTrash width={15} height={15} />

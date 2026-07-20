@@ -15,7 +15,7 @@ function MoveBtn({ label, tone, onClick, className = '', children }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 text-xs font-medium text-mute transition hover:text-ink xl:px-2.5 xl:py-1.5 ${t.hover} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 text-xs font-medium text-mute transition hover:text-ink 2xl:px-2.5 2xl:py-1.5 ${t.hover} ${className}`}
     >
       <span className={t.icon}>{children}</span>
       {label}
@@ -57,7 +57,7 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
   return (
     <>
       {/* ---- Phones: card list (a 9-column grid is unusable under ~768px) ---- */}
-      <ul className="space-y-2 xl:hidden">
+      <ul className="space-y-2 2xl:hidden">
         {rows.map((c) => {
           const chips = valueChips(c)
           return (
@@ -104,7 +104,7 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
       </ul>
 
       {/* ---- Tablet / desktop: full data grid ---- */}
-      <div className="hidden max-h-[75vh] overflow-auto rounded-lg bg-surface ring-1 ring-line xl:block">
+      <div className="hidden max-h-[75vh] overflow-auto rounded-lg bg-surface ring-1 ring-line 2xl:block">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 border-b border-line bg-surface2/95 backdrop-blur">
             <tr>
