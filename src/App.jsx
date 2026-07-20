@@ -157,7 +157,8 @@ function Dashboard() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
-              <img src="/BridgeThings.png" alt="BridgeThings" className="h-8 w-auto" />
+              {/* BASE_URL keeps the logo resolving under a subpath deploy (e.g. /BOM/) */}
+              <img src={`${import.meta.env.BASE_URL}BridgeThings.png`} alt="BridgeThings" className="h-8 w-auto" />
               <span className="h-8 w-px bg-line" />
               <div>
                 <h1 className="text-lg font-semibold leading-tight text-ink">BOM</h1>
