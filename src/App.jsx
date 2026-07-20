@@ -154,7 +154,7 @@ function Dashboard() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[90rem]">
           <div className="flex items-center justify-between py-4">
             <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               {/* BASE_URL keeps the logo resolving under a subpath deploy (e.g. /BOM/) */}
@@ -194,7 +194,7 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8 2xl:max-w-[90rem]">
         {!onCurrentDevice && error ? (
           <ErrorCard title="Couldn’t load data" message={error} />
         ) : !onCurrentDevice ? (
