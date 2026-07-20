@@ -44,7 +44,7 @@ export default function Modal({ open, onClose, closable = true, title, subtitle,
           <button
             onClick={() => closable && onClose?.()}
             disabled={!closable}
-            className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg p-1.5 text-faint transition hover:bg-raise hover:text-ink disabled:opacity-40 lg:min-h-0 lg:min-w-0"
+            className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg p-1.5 text-faint transition hover:bg-raise hover:text-ink disabled:opacity-40 xl:min-h-0 xl:min-w-0"
             aria-label="Close"
           >
             <IconClose />

@@ -15,7 +15,7 @@ function MoveBtn({ label, tone, onClick, className = '', children }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 text-xs font-medium text-mute transition hover:text-ink lg:px-2.5 lg:py-1.5 ${t.hover} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 text-xs font-medium text-mute transition hover:text-ink xl:px-2.5 xl:py-1.5 ${t.hover} ${className}`}
     >
       <span className={t.icon}>{children}</span>
       {label}
@@ -57,7 +57,7 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
   return (
     <>
       {/* ---- Phones: card list (a 9-column grid is unusable under ~768px) ---- */}
-      <ul className="space-y-2 lg:hidden">
+      <ul className="space-y-2 xl:hidden">
         {rows.map((c) => {
           const chips = valueChips(c)
           return (
@@ -104,14 +104,14 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
       </ul>
 
       {/* ---- Tablet / desktop: full data grid ---- */}
-      <div className="hidden max-h-[75vh] overflow-auto rounded-lg bg-surface ring-1 ring-line lg:block">
+      <div className="hidden max-h-[75vh] overflow-auto rounded-lg bg-surface ring-1 ring-line xl:block">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 border-b border-line bg-surface2/95 backdrop-blur">
             <tr>
               <th className={`${th} w-14 border-l-2 border-l-transparent`}>#</th>
               <th className={th}>Component</th>
               <th className={th}>Value</th>
-              <th className={`${th} hidden xl:table-cell`}>Label</th>
+              <th className={`${th} hidden 2xl:table-cell`}>Label</th>
               <th className={th}>Package</th>
               <th className={th}>Part No.</th>
               <th className={`${th} text-right`}>In Hand</th>
@@ -137,7 +137,7 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
                       </div>
                     )}
                   </td>
-                  <td className={`${td} hidden max-w-[180px] xl:table-cell`}>
+                  <td className={`${td} hidden max-w-[180px] 2xl:table-cell`}>
                     <span className="break-words text-xs text-mute">{c.label || '—'}</span>
                   </td>
                   <td className={td}>
