@@ -29,8 +29,20 @@ with keyed as (
            -- nothing to match on, so it stands alone rather than pooling with
            -- every other row that also lacks a value
            then 'solo:' || id::text
+           -- Same normalisation the app uses (src/lib/shared.js): the component
+           -- keeps ordinary case/space folding, but the VALUE also loses the ohm
+           -- symbol and the word, and micro is folded to 'u' — '10k', '10K' and
+           -- '10kΩ' are one resistor. Only notation is stripped, never magnitude.
            else lower(btrim(regexp_replace(component, '\s+', ' ', 'g'))) || '|' ||
-                lower(btrim(regexp_replace(coalesce(nullif(btrim(value), ''), value_raw), '\s+', ' ', 'g')))
+                regexp_replace(
+                  regexp_replace(
+                    regexp_replace(
+                      regexp_replace(
+                        lower(btrim(coalesce(nullif(btrim(value), ''), value_raw))),
+                      'ohms?y', '', 'g'),
+                    '[Ωω]', '', 'g'),
+                  '[µμ]', 'u', 'g'),
+                '\s+', '', 'g')
          end as k
   from public.bom_4g_components
 ),
@@ -59,8 +71,20 @@ with keyed as (
            when btrim(coalesce(component, '')) = ''
              or btrim(coalesce(nullif(btrim(value), ''), value_raw, '')) = ''
            then 'solo:' || id::text
+           -- Same normalisation the app uses (src/lib/shared.js): the component
+           -- keeps ordinary case/space folding, but the VALUE also loses the ohm
+           -- symbol and the word, and micro is folded to 'u' — '10k', '10K' and
+           -- '10kΩ' are one resistor. Only notation is stripped, never magnitude.
            else lower(btrim(regexp_replace(component, '\s+', ' ', 'g'))) || '|' ||
-                lower(btrim(regexp_replace(coalesce(nullif(btrim(value), ''), value_raw), '\s+', ' ', 'g')))
+                regexp_replace(
+                  regexp_replace(
+                    regexp_replace(
+                      regexp_replace(
+                        lower(btrim(coalesce(nullif(btrim(value), ''), value_raw))),
+                      'ohms?y', '', 'g'),
+                    '[Ωω]', '', 'g'),
+                  '[µμ]', 'u', 'g'),
+                '\s+', '', 'g')
          end as k
   from public.bom_rs485_components
 ),
@@ -89,8 +113,20 @@ with keyed as (
            when btrim(coalesce(component, '')) = ''
              or btrim(coalesce(nullif(btrim(value), ''), value_raw, '')) = ''
            then 'solo:' || id::text
+           -- Same normalisation the app uses (src/lib/shared.js): the component
+           -- keeps ordinary case/space folding, but the VALUE also loses the ohm
+           -- symbol and the word, and micro is folded to 'u' — '10k', '10K' and
+           -- '10kΩ' are one resistor. Only notation is stripped, never magnitude.
            else lower(btrim(regexp_replace(component, '\s+', ' ', 'g'))) || '|' ||
-                lower(btrim(regexp_replace(coalesce(nullif(btrim(value), ''), value_raw), '\s+', ' ', 'g')))
+                regexp_replace(
+                  regexp_replace(
+                    regexp_replace(
+                      regexp_replace(
+                        lower(btrim(coalesce(nullif(btrim(value), ''), value_raw))),
+                      'ohms?y', '', 'g'),
+                    '[Ωω]', '', 'g'),
+                  '[µμ]', 'u', 'g'),
+                '\s+', '', 'g')
          end as k
   from public.bom_lora_components
 ),
