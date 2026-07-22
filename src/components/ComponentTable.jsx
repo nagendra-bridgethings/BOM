@@ -191,10 +191,17 @@ export default function ComponentTable({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-baseline gap-x-2">
-                            <span className="text-sm font-medium text-ink">{o.device}</span>
-                            <span className="text-xs text-mute">{o.board}</span>
+                            {!o.sameBoard && (
+                              <>
+                                <span className="text-sm font-medium text-ink">{o.device}</span>
+                                <span className="text-xs text-mute">{o.board}</span>
+                              </>
+                            )}
                             <span className="text-xs tabular-nums text-faint">
                               #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
+                            </span>
+                            <span className="text-sm text-ink/85">
+                              {o.row.value || o.row.value_raw || '—'}
                             </span>
                           </div>
                           {o.row.label && <p className="mt-0.5 break-words text-xs text-faint">{o.row.label}</p>}
@@ -331,16 +338,27 @@ export default function ComponentTable({
                 {isOpen && shared?.others.map((o) => (
                   <tr key={`${o.device}::${o.row.id}`} className="bg-surface2/50">
                     <td className={`${td} border-l-2 border-l-primary/40`} />
-                    <td className={td} colSpan={3}>
+                    <td className={td} colSpan={2}>
                       <div className="flex flex-wrap items-baseline gap-x-2">
                         <span className="text-faint">↳</span>
-                        <span className="text-sm font-medium text-ink">{o.device}</span>
-                        <span className="text-sm text-mute">{o.board}</span>
+                        {/* a twin on this same board only needs its serial — repeating
+                            the device and board it shares with the row above is noise */}
+                        {!o.sameBoard && (
+                          <>
+                            <span className="text-sm font-medium text-ink">{o.device}</span>
+                            <span className="text-sm text-mute">{o.board}</span>
+                          </>
+                        )}
                         <span className="text-xs tabular-nums text-faint">
                           #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
                         </span>
-                        {o.row.label && <span className="text-xs text-faint">{o.row.label}</span>}
+                        <span className="text-sm text-ink/85">
+                          {o.row.value || o.row.value_raw || '—'}
+                        </span>
                       </div>
+                    </td>
+                    <td className={`${td} max-w-[190px]`}>
+                      <span className="break-words text-xs text-mute">{o.row.label || '—'}</span>
                     </td>
                     <td className={td}>
                       <span className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink/80 ring-1 ring-line2">

@@ -6,7 +6,7 @@ import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber, matchesQuery } from './lib/format'
-import { buildSharedIndex, sharedInfo } from './lib/shared'
+import { buildSharedIndex, sharedInfo, sharedKey } from './lib/shared'
 
 import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
@@ -128,12 +128,37 @@ function Dashboard() {
       const others = info.others.map((o) => {
         const bucket = allDevices?.[o.device]
         const txns = bucket?.byComponent?.[o.row.id] || []
-        return { ...o, qty: bucket ? liveQty(o.row, txns) : null, txnCount: txns.length }
+        return {
+          ...o,
+          // a twin on this very board needs no device/board caption repeating
+          sameBoard: o.device === device && o.board === c.sub_board,
+          qty: bucket ? liveQty(o.row, txns) : null,
+          txnCount: txns.length,
+        }
       })
       return { ...info, others }
     },
     [sharedIndex, device, allDevices],
   )
+
+  // The same part entered twice on one board stays two rows in the database —
+  // they are real, separate lines with their own designators. But listing them
+  // side by side makes the board look like it holds two stocks of one part, and
+  // the emptier row reads as "none left". Only the first appears at top level;
+  // the rest open underneath it, keeping their own quantity and actions.
+  const displayRows = useMemo(() => {
+    const seen = new Set()
+    return filtered.filter((c) => {
+      const k = sharedKey(c)
+      if (!k) return true
+      const info = sharedFor(c)
+      if (!info || info.duplicates.length === 0) return true
+      const groupKey = `${c.sub_board}||${k}`
+      if (seen.has(groupKey)) return false // already shown, nested under the first
+      seen.add(groupKey)
+      return true
+    })
+  }, [filtered, sharedFor])
 
   // Matches across all three devices, grouped device -> board. Filters apply here
   // too, so narrowing by type or low stock works the same whether you are
@@ -265,7 +290,7 @@ function Dashboard() {
   function toggleAll(on) {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      for (const r of filtered) {
+      for (const r of displayRows) {
         if (on) next.add(r.id)
         else next.delete(r.id)
       }
@@ -481,7 +506,7 @@ function Dashboard() {
                     </>
                   ) : (
                     <>
-                      Showing <span className="font-semibold text-mute">{filtered.length}</span> of {boardRows.length}
+                      Showing <span className="font-semibold text-mute">{displayRows.length}</span> of {boardRows.length}
                       {subBoard ? ` · ${subBoard}` : ''}
                     </>
                   )}
@@ -502,7 +527,7 @@ function Dashboard() {
                 />
               ) : (
               <ComponentTable
-                rows={filtered}
+                rows={displayRows}
                 onInward={(c, d) => setTxnState({ mode: 'inward', component: c, device: d || device })}
                 onOutward={(c, d) => setTxnState({ mode: 'outward', component: c, device: d || device })}
                 onReturn={(c, d) => setTxnState({ mode: 'return', component: c, device: d || device })}
