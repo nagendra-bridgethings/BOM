@@ -6,11 +6,13 @@ import { DEVICES } from '../lib/constants'
 // LORA at once. The main view only ever loads the selected device, so a search
 // spanning all three needs its own read.
 //
-// Loaded lazily and only while `enabled` — the whole set is ~191 components, but
-// there is no reason to pay for it on a session where nobody searches. The fetch
-// runs when `enabled` flips on, so each new search session starts from fresh
-// stock rather than a snapshot that could be an hour old.
-export function useAllDevices(enabled) {
+// Also backs the shared-part index — knowing a component sits on more than one
+// board means knowing what every board holds, so this now loads on mount rather
+// than only when a search begins.
+//
+// `version` forces a re-read: bump it after anything that adds, removes or moves
+// stock, so the figures here don't drift from the device on screen.
+export function useAllDevices(enabled, version = 0) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -35,7 +37,7 @@ export function useAllDevices(enabled) {
         if (myReq === reqId.current) setLoading(false)
       }
     })()
-  }, [enabled])
+  }, [enabled, version])
 
   return { data, loading, error }
 }

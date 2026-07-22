@@ -21,9 +21,10 @@ export function txnDelta(t) {
 // cross-device search so the two can't drift into matching different fields.
 export function matchesQuery(c, q) {
   if (!q) return true
-  return [c.component, c.value_raw, c.value, c.label, c.part_number, c.package].some(
-    (v) => v && String(v).toLowerCase().includes(q),
-  )
+  return [
+    c.component, c.value_raw, c.value, c.label,
+    c.part_number, c.identification_number, c.package, c.supply_form,
+  ].some((v) => v && String(v).toLowerCase().includes(q))
 }
 
 // Small parsed chips (voltage / rating / material / tolerance) for the value cell.

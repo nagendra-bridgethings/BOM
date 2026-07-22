@@ -35,7 +35,8 @@ export async function fetchTransactions(device, componentIds) {
 const COMPONENT_FIELDS = [
   'sub_board', 's_no', 's_no_raw', 'component', 'value_raw', 'value',
   'voltage', 'rating', 'material', 'tolerance', 'label', 'package',
-  'part_number', 'opening_quantity', 'quantity_note',
+  'part_number', 'identification_number', 'supply_form',
+  'opening_quantity', 'quantity_note',
   'sort_order',
 ]
 

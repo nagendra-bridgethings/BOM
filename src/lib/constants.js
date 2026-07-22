@@ -84,6 +84,10 @@ export const COMPONENT_TYPES = [
   'Screws',
 ]
 
+// How a part is supplied. Blank is valid and common — it doesn't apply to bare
+// PCBs, enclosures or screws.
+export const SUPPLY_FORMS = ['Cut Tape', 'Reel']
+
 // Which of the parsed value sub-fields are relevant per component type.
 // Anything not listed here is treated as non-parametric -> a single "Value" field.
 export const VALUE_FIELDS_BY_COMPONENT = {

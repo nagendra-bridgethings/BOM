@@ -3,13 +3,13 @@ import Modal from './ui/Modal'
 import Combobox from './ui/Combobox'
 import { Field, TextInput, NumberInput, Button } from './ui/controls'
 import { IconChip } from './ui/icons'
-import { COMPONENT_TYPES, DEVICES, DEVICE_SUB_BOARDS, FIELD_META, MAX_QTY, valueFieldsFor } from '../lib/constants'
+import { COMPONENT_TYPES, DEVICES, DEVICE_SUB_BOARDS, FIELD_META, MAX_QTY, SUPPLY_FORMS, valueFieldsFor } from '../lib/constants'
 import { formatNumber } from '../lib/format'
 import { insertComponent, updateComponent, nextRowMeta } from '../lib/db'
 
 const EMPTY = {
   device: '', sub_board: '', component: '', value: '', voltage: '', rating: '', material: '',
-  tolerance: '', label: '', package: '', part_number: '',
+  tolerance: '', label: '', package: '', part_number: '', identification_number: '', supply_form: '',
   opening_quantity: '', quantity_note: '',
 }
 
@@ -47,6 +47,8 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
         label: initial.label ?? '',
         package: initial.package ?? '',
         part_number: initial.part_number ?? '',
+        identification_number: initial.identification_number ?? '',
+        supply_form: initial.supply_form ?? '',
         opening_quantity: initial.opening_quantity ?? '',
         quantity_note: initial.quantity_note ?? '',
       })
@@ -117,6 +119,8 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
       label: (form.label || '').trim() || null,
       package: (form.package || '').trim() || null,
       part_number: (form.part_number || '').trim() || null,
+      identification_number: (form.identification_number || '').trim() || null,
+      supply_form: form.supply_form || null,
       opening_quantity: openingQty,
       quantity_note: (form.quantity_note || '').trim() || null,
     }
@@ -225,11 +229,26 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
         </div>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Field label="Label (designators)" className="col-span-2">
+          <Field label="Label (designators)" className="col-span-2 sm:col-span-3">
             <TextInput value={form.label} onChange={set('label')} placeholder="e.g. C4,C5,C25,C26" />
           </Field>
-          <Field label="Part Number" className="col-span-2 sm:col-span-1">
+          <Field label="Part Number" hint="Distributor code" className="col-span-2 sm:col-span-1">
             <TextInput value={form.part_number} onChange={set('part_number')} placeholder="e.g. C60474" />
+          </Field>
+          <Field label="Identification No." hint="Manufacturer’s own number" className="col-span-2 sm:col-span-1">
+            <TextInput
+              value={form.identification_number}
+              onChange={set('identification_number')}
+              placeholder="e.g. GRM155R71C104KA88D"
+            />
+          </Field>
+          <Field label="Supply form" hint="Blank if it doesn’t apply" className="col-span-2 sm:col-span-1">
+            <select value={form.supply_form} onChange={set('supply_form')} className={selectCls}>
+              <option value="">—</option>
+              {SUPPLY_FORMS.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
           </Field>
         </div>
 

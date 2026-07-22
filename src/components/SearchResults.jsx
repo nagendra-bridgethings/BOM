@@ -75,6 +75,12 @@ export default function SearchResults({ groups, total, query, loading, error, on
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
                             {c.package && <span className="font-mono text-ink/70">{c.package}</span>}
                             {c.part_number && <span className="font-mono">{c.part_number}</span>}
+                            {c.identification_number && <span className="font-mono">{c.identification_number}</span>}
+                            {c.supply_form && (
+                              <span className="rounded bg-surface2 px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">
+                                {c.supply_form}
+                              </span>
+                            )}
                             {c.label && <span className="break-words">{c.label}</span>}
                             {chips.map((ch, i) => (
                               <span key={i} className="rounded bg-surface2 px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">

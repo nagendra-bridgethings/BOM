@@ -211,6 +211,11 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
                             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-faint">
                               <span>{l.sub_board}</span>
                               {l.package && <span className="font-mono">{l.package}</span>}
+                              {l.supply_form && (
+                                <span className="rounded bg-surface2 px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">
+                                  {l.supply_form}
+                                </span>
+                              )}
                               {gone ? (
                                 <span className="text-coral">no longer in the database</span>
                               ) : (

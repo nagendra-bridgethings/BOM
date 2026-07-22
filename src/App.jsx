@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabaseConfigured } from './lib/supabase'
 import { deleteComponent } from './lib/db'
 import { useInventory } from './hooks/useInventory'
@@ -6,6 +6,7 @@ import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber, matchesQuery } from './lib/format'
+import { buildSharedIndex, sharedInfo } from './lib/shared'
 
 import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
@@ -17,6 +18,7 @@ import TransactionModal from './components/TransactionModal'
 import HistoryModal from './components/HistoryModal'
 import CartModal from './components/CartModal'
 import BatchHistoryModal from './components/BatchHistoryModal'
+import SharedPartsModal from './components/SharedPartsModal'
 import { Button } from './components/ui/controls'
 import { IconCart, IconHistory } from './components/ui/icons'
 
@@ -39,6 +41,9 @@ function Dashboard() {
   const [historyComp, setHistoryComp] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [batchesOpen, setBatchesOpen] = useState(false)
+  const [sharedPart, setSharedPart] = useState(null) // { part, locations }
+  // bumped after any mutation so the all-device data re-reads
+  const [dataVersion, setDataVersion] = useState(0)
 
   // bulk outward: tick rows on any device, queue them, issue them in one go
   const [selectMode, setSelectMode] = useState(false)
@@ -109,7 +114,16 @@ function Dashboard() {
     [boardRows, query, typeFilter, lowOnly],
   )
 
-  const { data: allDevices, loading: searchLoading, error: searchError } = useAllDevices(searching)
+  // Loaded for every session, not just when searching — the shared-part chips on
+  // the table need to know what the other devices hold. `dataVersion` re-reads it
+  // after a mutation so it can't drift from the device on screen.
+  const { data: allDevices, loading: searchLoading, error: searchError } = useAllDevices(true, dataVersion)
+
+  const sharedIndex = useMemo(() => buildSharedIndex(allDevices), [allDevices])
+  const sharedFor = useCallback(
+    (c) => sharedInfo(sharedIndex, c, device),
+    [sharedIndex, device],
+  )
 
   // Matches across all three devices, grouped device -> board. Filters apply here
   // too, so narrowing by type or low stock works the same whether you are
@@ -193,6 +207,7 @@ function Dashboard() {
   // A component can be added to any device, so jump the view to wherever it
   // landed — otherwise the user saves and sees nothing change.
   async function handleSaved(savedDevice, savedSubBoard) {
+    setDataVersion((v) => v + 1) // a new or moved row changes what is shared
     if (savedDevice && savedDevice !== device) {
       if (savedSubBoard) setSubBoard(savedSubBoard)
       setDevice(savedDevice) // useInventory reloads on device change
@@ -200,6 +215,18 @@ function Dashboard() {
     }
     if (savedSubBoard && savedSubBoard !== subBoard) setSubBoard(savedSubBoard)
     await reload()
+  }
+
+  // Every mutation goes through here: reload the device on screen and re-read the
+  // other two, so the shared-part chips and their stock stay in step with it.
+  const refreshAll = useCallback(async () => {
+    setDataVersion((v) => v + 1)
+    await reload()
+  }, [reload])
+
+  function showShared(c) {
+    const info = sharedFor(c)
+    if (info) setSharedPart({ part: c, locations: info.all })
   }
 
   // Jump from a search result to where the component actually lives. Clearing the
@@ -248,7 +275,8 @@ function Dashboard() {
   async function handleCartDone(doneDevices) {
     if (doneDevices.length > 0) {
       cart.removeDevices(doneDevices)
-      if (doneDevices.includes(device)) await reload()
+      // a bulk outward can move stock on devices other than the one on screen
+      await refreshAll()
     }
   }
 
@@ -256,7 +284,7 @@ function Dashboard() {
     if (!window.confirm(`Delete "${c.component} — ${c.value_raw || c.label || ''}" and all its transactions?`)) return
     try {
       await deleteComponent(device, c.id)
-      await reload()
+      await refreshAll()
     } catch (e) {
       window.alert(e.message || String(e))
     }
@@ -396,7 +424,7 @@ function Dashboard() {
                   lowOnly={lowOnly}
                   onToggleLow={() => setLowOnly((v) => !v)}
                   onAdd={() => { setFormInitial(null); setFormOpen(true) }}
-                  onRefresh={reload}
+                  onRefresh={refreshAll}
                   loading={loading}
                   selectMode={selectMode}
                   onToggleSelectMode={() => {
@@ -465,6 +493,8 @@ function Dashboard() {
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onToggleAll={toggleAll}
+                sharedFor={sharedFor}
+                onShowShared={showShared}
               />
               )}
             </>
@@ -486,7 +516,7 @@ function Dashboard() {
       <TransactionModal
         open={Boolean(txnState)}
         onClose={() => setTxnState(null)}
-        onSaved={reload}
+        onSaved={refreshAll}
         device={device}
         mode={txnState?.mode}
         component={activeComp}
@@ -495,6 +525,17 @@ function Dashboard() {
       />
 
       <BatchHistoryModal open={batchesOpen} onClose={() => setBatchesOpen(false)} />
+
+      <SharedPartsModal
+        open={Boolean(sharedPart)}
+        onClose={() => setSharedPart(null)}
+        part={sharedPart?.part}
+        locations={sharedPart?.locations || []}
+        stock={allDevices}
+        onGoTo={(d, b) => { setSharedPart(null); handleGoTo(d, b) }}
+        onAddToCart={(d, c) => cart.addMany(d, [c])}
+        inCart={cart.has}
+      />
 
       <CartModal
         open={cartOpen}
@@ -508,7 +549,7 @@ function Dashboard() {
       <HistoryModal
         open={Boolean(historyComp)}
         onClose={() => setHistoryComp(null)}
-        onChanged={reload}
+        onChanged={refreshAll}
         device={device}
         component={historyComp}
         txns={historyTxns}

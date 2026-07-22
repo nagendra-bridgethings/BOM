@@ -55,6 +55,9 @@ export function useCart() {
           component: c.component ?? '',
           value_raw: c.value_raw ?? c.value ?? '',
           package: c.package ?? '',
+          // shown while picking — a reel can't be cut, which is exactly when
+          // `sending` has to differ from `needed`
+          supply_form: c.supply_form ?? '',
           needed: '',
           sending: '',
         }))

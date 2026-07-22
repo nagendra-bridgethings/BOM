@@ -2,7 +2,7 @@ import QtyBadge from './QtyBadge'
 import Menu from './ui/Menu'
 import { valueChips } from '../lib/format'
 import { LOW_STOCK_THRESHOLD } from '../lib/constants'
-import { IconInward, IconOutward, IconReturn, IconHistory, IconEdit, IconTrash } from './ui/icons'
+import { IconInward, IconOutward, IconReturn, IconHistory, IconEdit, IconTrash, IconLayers } from './ui/icons'
 
 // Labelled stock-movement button. Direction colour lives on the icon
 // (teal = inward, coral = outward, neutral = return) so it reads at a glance.
@@ -45,6 +45,27 @@ function rowMenu(c, { onHistory, onEdit, onDelete }) {
 // module-level so the default prop keeps a stable identity between renders
 const EMPTY_SELECTION = new Set()
 
+// Marks a part that exists on other boards too, and opens the list of them.
+function SharedChip({ info, onClick }) {
+  if (!info) return null
+  // a split listing on one board is a data problem, not just a cross-reference
+  const dupe = info.duplicates.length > 0
+  return (
+    <button
+      onClick={onClick}
+      title={dupe ? 'Stock for this part is split across more than one row' : 'See every board that uses this part'}
+      className={`mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 transition ${
+        dupe
+          ? 'bg-sun/12 text-sun ring-sun/30 hover:bg-sun/20'
+          : 'bg-primary/8 text-primary ring-primary/25 hover:bg-primary/15'
+      }`}
+    >
+      <IconLayers width={11} height={11} />
+      {info.label}
+    </button>
+  )
+}
+
 // In select mode the checkbox takes the place of the action buttons rather than
 // sitting beside them — the row is already tight on a phone, and a fourth control
 // would push the ⋯ menu out of reach.
@@ -63,6 +84,7 @@ function SelectBox({ checked, onChange, label }) {
 export default function ComponentTable({
   rows, onInward, onOutward, onReturn, onHistory, onEdit, onDelete,
   selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
+  sharedFor, onShowShared,
 }) {
   if (rows.length === 0) {
     return (
@@ -96,6 +118,7 @@ export default function ComponentTable({
                     <span className="font-semibold text-ink">{c.component || '—'}</span>
                   </div>
                   <div className="mt-0.5 text-sm font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
+                  <SharedChip info={sharedFor?.(c)} onClick={() => onShowShared(c)} />
                   {chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {chips.map((ch, i) => (
@@ -116,7 +139,15 @@ export default function ComponentTable({
                 <span className="text-faint">
                   Part <span className="ml-1 font-mono text-mute">{c.part_number || '—'}</span>
                 </span>
+                {c.supply_form && (
+                  <span className="rounded bg-surface2 px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">
+                    {c.supply_form}
+                  </span>
+                )}
               </div>
+              {c.identification_number && (
+                <p className="mt-1 break-words font-mono text-xs text-mute">{c.identification_number}</p>
+              )}
               {c.label && <p className="mt-1 break-words text-xs text-mute">{c.label}</p>}
 
               {selectMode ? (
@@ -143,7 +174,7 @@ export default function ComponentTable({
 
       {/* ---- Tablet / desktop: full data grid ---- */}
       <div className="hidden max-h-[75vh] overflow-auto rounded-lg bg-surface ring-1 ring-line 2xl:block">
-        <table className="w-full min-w-[900px] border-collapse text-sm">
+        <table className="w-full min-w-[1120px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 border-b border-line bg-surface2/95 backdrop-blur">
             <tr>
               <th className={`${th} w-14 border-l-2 border-l-transparent`}>#</th>
@@ -152,6 +183,8 @@ export default function ComponentTable({
               <th className={th}>Label</th>
               <th className={th}>Package</th>
               <th className={th}>Part No.</th>
+              <th className={th}>ID No.</th>
+              <th className={th}>Supply</th>
               <th className={`${th} text-right`}>In Hand</th>
               <th className={`${th} pr-4 text-right`}>
                 {selectMode ? (
@@ -182,6 +215,7 @@ export default function ComponentTable({
                   <td className={`${td} ${stripeFor(c)} tabular-nums text-faint`}>{c.s_no ?? c.s_no_raw ?? '—'}</td>
                   <td className={td}>
                     <div className="font-semibold text-ink">{c.component || '—'}</div>
+                    <SharedChip info={sharedFor?.(c)} onClick={() => onShowShared(c)} />
                   </td>
                   <td className={`${td} max-w-[240px]`}>
                     <div className="font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
@@ -201,6 +235,20 @@ export default function ComponentTable({
                   </td>
                   <td className={td}>
                     <span className="font-mono text-xs text-mute">{c.part_number || '—'}</span>
+                  </td>
+                  <td className={`${td} max-w-[170px]`}>
+                    <span className="block break-words font-mono text-xs text-mute">
+                      {c.identification_number || '—'}
+                    </span>
+                  </td>
+                  <td className={td}>
+                    {c.supply_form ? (
+                      <span className="whitespace-nowrap rounded bg-surface2 px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">
+                        {c.supply_form}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-faint">—</span>
+                    )}
                   </td>
                   <td className={`${td} text-right`}>
                     <QtyBadge qty={c._qty} note={c.quantity_note} hasActivity={c._txnCount > 0} />
