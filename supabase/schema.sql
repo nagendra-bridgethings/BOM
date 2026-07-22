@@ -41,7 +41,9 @@ create table if not exists public.bom_4g_components (
   tolerance         text,               -- parsed tolerance    (e.g. '10%','±1%')
   label             text,               -- reference designators (e.g. 'R2,R3,R10')
   package           text,               -- the PDF 'TYPE' column (e.g. 'R0402')
-  part_number       text,               -- e.g. 'C60474'
+  part_number       text,               -- e.g. 'C60474' (distributor code)
+  identification_number text,           -- the manufacturer's own number
+  supply_form       text,               -- 'Cut Tape' | 'Reel', blank where n/a
   opening_quantity  numeric not null default 0,
   quantity_note     text,               -- 'NC' etc. when qty is not a number
   flags             text[] not null default '{}',
@@ -61,9 +63,11 @@ create table if not exists public.bom_4g_transactions (
   related_txn_id  uuid references public.bom_4g_transactions(id),
   txn_date        date not null default current_date,
   reason          text,
+  batch_id        uuid,               -- set only by a bulk outward; groups its rows
   created_at      timestamptz not null default now()
 );
 create index if not exists idx_bom_4g_txn_component on public.bom_4g_transactions(component_id);
+create index if not exists bom_4g_txn_batch_idx on public.bom_4g_transactions(batch_id) where batch_id is not null;
 
 drop trigger if exists trg_bom_4g_components_touch on public.bom_4g_components;
 create trigger trg_bom_4g_components_touch
@@ -102,6 +106,8 @@ create table if not exists public.bom_rs485_components (
   label             text,
   package           text,
   part_number       text,
+  identification_number text,
+  supply_form       text,
   opening_quantity  numeric not null default 0,
   quantity_note     text,
   flags             text[] not null default '{}',
@@ -121,9 +127,11 @@ create table if not exists public.bom_rs485_transactions (
   related_txn_id  uuid references public.bom_rs485_transactions(id),
   txn_date        date not null default current_date,
   reason          text,
+  batch_id        uuid,               -- set only by a bulk outward; groups its rows
   created_at      timestamptz not null default now()
 );
 create index if not exists idx_bom_rs485_txn_component on public.bom_rs485_transactions(component_id);
+create index if not exists bom_rs485_txn_batch_idx on public.bom_rs485_transactions(batch_id) where batch_id is not null;
 
 drop trigger if exists trg_bom_rs485_components_touch on public.bom_rs485_components;
 create trigger trg_bom_rs485_components_touch
@@ -162,6 +170,8 @@ create table if not exists public.bom_lora_components (
   label             text,
   package           text,
   part_number       text,
+  identification_number text,
+  supply_form       text,
   opening_quantity  numeric not null default 0,
   quantity_note     text,
   flags             text[] not null default '{}',
@@ -181,9 +191,11 @@ create table if not exists public.bom_lora_transactions (
   related_txn_id  uuid references public.bom_lora_transactions(id),
   txn_date        date not null default current_date,
   reason          text,
+  batch_id        uuid,               -- set only by a bulk outward; groups its rows
   created_at      timestamptz not null default now()
 );
 create index if not exists idx_bom_lora_txn_component on public.bom_lora_transactions(component_id);
+create index if not exists bom_lora_txn_batch_idx on public.bom_lora_transactions(batch_id) where batch_id is not null;
 
 drop trigger if exists trg_bom_lora_components_touch on public.bom_lora_components;
 create trigger trg_bom_lora_components_touch

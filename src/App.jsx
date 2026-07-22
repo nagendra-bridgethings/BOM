@@ -340,11 +340,19 @@ function Dashboard() {
     if (!window.confirm(`Delete "${c.component} — ${c.value_raw || c.label || ''}" and all its transactions?`)) return
     try {
       await deleteComponent(device, c.id)
-      await renumberBoard(device, c.sub_board) // close the gap it leaves
-      await refreshAll()
     } catch (e) {
       window.alert(e.message || String(e))
+      return
     }
+    // Deleted from here on. Renumbering is a separate networked step, and letting
+    // it fail the whole handler would skip the reload and leave the deleted row
+    // on screen with live Inward/Outward buttons.
+    try {
+      await renumberBoard(device, c.sub_board) // close the gap it leaves
+    } catch (e) {
+      window.alert(`Deleted, but the board could not be renumbered: ${e.message || String(e)}`)
+    }
+    await refreshAll()
   }
 
   // History can be opened on a row belonging to another device, so it reads that

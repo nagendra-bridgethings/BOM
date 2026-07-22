@@ -134,6 +134,8 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
       !isEdit || valueFields.some((f) => (form[f] || '').trim() !== (initial[f] ?? '').trim())
     if (writeValueRaw) payload.value_raw = buildValueRaw(form) || null
 
+    // Up to here nothing is written, so a failure can be retried safely and the
+    // form stays open holding the input.
     try {
       if (isEdit) {
         // s_no / s_no_raw are omitted so an existing row keeps its serial;
@@ -154,19 +156,33 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
         payload.sort_order = nextSortOrder
         await insertComponent(targetDevice, payload)
       }
+    } catch (e) {
+      setError(e.message || String(e))
+      setSaving(false)
+      return
+    }
 
+    // The row is committed from here on, so the form closes before anything else
+    // is attempted. Renumbering and the reload are both networked, and leaving a
+    // filled form with a live Save button behind them turns one dropped request
+    // into a second identical component.
+    setSaving(false)
+    onClose?.()
+
+    try {
       // A new row joins the group it matches rather than sitting at the bottom,
       // and an edited value can move it between groups — either way the board's
       // numbering has to close up behind it.
       await renumberBoard(targetDevice, targetBoard)
       if (isEdit && boardChanged) await renumberBoard(targetDevice, initial.sub_board)
-
       await onSaved?.(targetDevice, targetBoard)
-      onClose?.()
     } catch (e) {
-      setError(e.message || String(e))
-    } finally {
-      setSaving(false)
+      // saved either way — say so, and say what did not finish
+      window.alert(
+        `Saved, but the board could not be reordered: ${e.message || String(e)}\n\n` +
+          'Use Refresh — the numbering settles on the next change.',
+      )
+      await onSaved?.(targetDevice, targetBoard).catch(() => {})
     }
   }
 

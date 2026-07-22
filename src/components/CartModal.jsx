@@ -16,6 +16,9 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  // the exact set of over-issue quantities the user ticked for, so editing any
+  // of them afterwards invalidates the confirmation rather than carrying it over
+  const [confirmedKey, setConfirmedKey] = useState(null)
   // live in-hand per device::id, re-read on open — a cart can sit for an hour
   // while other people move stock, so the snapshot taken at add time is not safe
   // to validate against.
@@ -33,6 +36,7 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
     setSaving(false)
     setStock(null)
     setStockError(null)
+    setConfirmedKey(null)
     let cancelled = false
     ;(async () => {
       try {
@@ -73,6 +77,12 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
     return q != null && Number(l.sending) > q
   })
 
+  // A confirmation is only meaningful against the exact quantities it was given
+  // for, so it is keyed to them — editing any line afterwards clears the tick,
+  // the same rule the single-item outward uses.
+  const shortfallKey = shortfalls.map((l) => `${l.device}:${l.id}:${l.sending}`).join('|')
+  const confirmedNegative = confirmedKey !== null && confirmedKey === shortfallKey
+
   // rows removed from the DB (or from a device) since they were queued
   const missing = stock ? lines.filter((l) => inHand(l) == null) : []
 
@@ -104,6 +114,24 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
     }
     if (missing.length > 0) {
       setError(`${missing.length} item(s) no longer exist in the database — remove them before recording.`)
+      return
+    }
+    // Without a stock read there is nothing to compare against, so a shortfall
+    // cannot be detected at all — recording blind is how a bulk outward goes
+    // negative with no warning of any kind.
+    if (!stock) {
+      setError(
+        stockError
+          ? 'Current stock could not be read, so quantities can’t be checked. Reopen the cart to try again.'
+          : 'Still reading current stock — give it a moment.',
+      )
+      return
+    }
+    if (shortfalls.length > 0 && !confirmedNegative) {
+      setError(
+        `${shortfalls.length} item${shortfalls.length === 1 ? '' : 's'} send more than what is in hand — ` +
+          'tick the confirmation below to record it anyway.',
+      )
       return
     }
     setSaving(true)
@@ -267,13 +295,24 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
             ))}
 
             {shortfalls.length > 0 && (
-              <p className="flex items-start gap-2 rounded-lg bg-coral/12 px-3 py-2 text-xs text-coral ring-1 ring-coral/30">
-                <IconWarning width={14} height={14} className="mt-0.5 shrink-0" />
-                <span>
-                  {shortfalls.length} item{shortfalls.length === 1 ? '' : 's'} send more than what is in hand.
-                  Recording will take {shortfalls.length === 1 ? 'it' : 'them'} negative.
-                </span>
-              </p>
+              <div className="space-y-2 rounded-lg bg-coral/12 px-3 py-2.5 ring-1 ring-coral/30">
+                <p className="flex items-start gap-2 text-xs text-coral">
+                  <IconWarning width={14} height={14} className="mt-0.5 shrink-0" />
+                  <span>
+                    {shortfalls.length} item{shortfalls.length === 1 ? '' : 's'} send more than what is in hand.
+                    Recording will take {shortfalls.length === 1 ? 'it' : 'them'} negative.
+                  </span>
+                </p>
+                <label className="flex min-h-9 cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1 text-xs font-medium text-coral transition hover:bg-coral/12">
+                  <input
+                    type="checkbox"
+                    checked={confirmedNegative}
+                    onChange={(e) => setConfirmedKey(e.target.checked ? shortfallKey : null)}
+                    className="size-5 shrink-0 cursor-pointer accent-coral"
+                  />
+                  Record {shortfalls.length === 1 ? 'it' : 'them'} anyway
+                </label>
+              </div>
             )}
 
             <div className="grid grid-cols-1 gap-4 rounded-xl bg-surface2 p-4 ring-1 ring-line sm:grid-cols-3">
