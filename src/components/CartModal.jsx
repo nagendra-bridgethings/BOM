@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from './ui/Modal'
 import { Field, NumberInput, DateInput, TextArea, Button } from './ui/controls'
 import { IconCart, IconTrash, IconWarning } from './ui/icons'
 import { DEVICES, MAX_QTY } from '../lib/constants'
 import { formatNumber, liveQty, todayISO } from '../lib/format'
-import { fetchDeviceStock, insertTransactions } from '../lib/db'
+import { fetchDeviceStock, insertTransactions, batchExists } from '../lib/db'
 
 const deviceOrder = (d) => {
   const i = DEVICES.findIndex((x) => x.key === d)
   return i === -1 ? 99 : i
 }
 
-export default function CartModal({ open, onClose, lines, onSetQty, onRemove, onDone }) {
+export default function CartModal({ open, onClose, lines, onSetQty, onRemove, onDone, numberOf }) {
   const [date, setDate] = useState(todayISO())
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
@@ -19,6 +19,10 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
   // the exact set of over-issue quantities the user ticked for, so editing any
   // of them afterwards invalidates the confirmation rather than carrying it over
   const [confirmedKey, setConfirmedKey] = useState(null)
+  // the batch id of the attempt in progress, held so a retry can look for rows a
+  // lost response may have already committed
+  const batchIdRef = useRef(null)
+  const [retrying, setRetrying] = useState(false)
   // live in-hand per device::id, re-read on open — a cart can sit for an hour
   // while other people move stock, so the snapshot taken at add time is not safe
   // to validate against.
@@ -37,6 +41,8 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
     setStock(null)
     setStockError(null)
     setConfirmedKey(null)
+    batchIdRef.current = null
+    setRetrying(false)
     let cancelled = false
     ;(async () => {
       try {
@@ -137,9 +143,12 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
     setSaving(true)
     setError(null)
 
-    // One id for the whole issue, shared across every device it touches — that
-    // is what lets batch history show a 4G + LORA pick as a single entry.
-    const batchId = crypto.randomUUID()
+    // One id for the whole issue, shared across every device it touches — that is
+    // what lets batch history show a 4G + LORA pick as a single entry. It is kept
+    // across retries too: an insert whose response was lost still committed, and a
+    // fresh id would make those rows unfindable and issue the stock a second time.
+    const batchId = batchIdRef.current || crypto.randomUUID()
+    batchIdRef.current = batchId
     const done = []
     const failed = []
     for (const [device, items] of grouped) {
@@ -153,12 +162,19 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
         batch_id: batchId,
       }))
       try {
+        // A previous attempt may have committed this device without the response
+        // reaching us; the rows carry this batch id, so look before writing again.
+        if (retrying && (await batchExists(device, batchId))) {
+          done.push(device)
+          continue
+        }
         await insertTransactions(device, rows)
         done.push(device)
       } catch (e) {
         failed.push({ device, message: e.message || String(e) })
       }
     }
+    setRetrying(true) // any further click on Record is a retry
 
     setSaving(false)
     // Devices that committed leave the cart; the rest stay queued so a retry
@@ -232,7 +248,7 @@ export default function CartModal({ open, onClose, lines, onSetQty, onRemove, on
                         <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-baseline gap-x-2">
-                              <span className="text-xs tabular-nums text-faint">{l.s_no ?? l.s_no_raw ?? '—'}</span>
+                              <span className="text-xs tabular-nums text-faint">{numberOf?.(l.device, l.id) ?? '↳'}</span>
                               <span className="text-sm font-semibold text-ink">{l.component || '—'}</span>
                               <span className="text-sm text-ink/80">{l.value_raw || '—'}</span>
                             </div>

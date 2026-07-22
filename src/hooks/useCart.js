@@ -39,6 +39,19 @@ export function useCart() {
     }
   }, [lines])
 
+  // Follow the same cart in other tabs. Without this a tab holds whatever it read
+  // at mount, so recording a pick in one tab leaves the other still showing it —
+  // and recording there again issues the same stock twice. `storage` fires only
+  // in the tabs that did NOT write, which is exactly the set that is now stale.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== KEY && e.key !== null) return // null = storage cleared wholesale
+      setLines(readStored())
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   // Adds only what isn't already queued, so re-selecting a row can't duplicate
   // it or wipe a quantity that was already typed against it.
   const addMany = useCallback((device, components) => {

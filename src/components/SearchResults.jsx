@@ -14,7 +14,7 @@ function stripeFor(c) {
   return 'border-l-2 border-l-transparent'
 }
 
-export default function SearchResults({ groups, total, query, loading, error, onGoTo, onAddToCart, inCart }) {
+export default function SearchResults({ groups, total, query, loading, error, onGoTo, onAddToCart, inCart, numberOf }) {
   if (error) {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center">
@@ -68,7 +68,7 @@ export default function SearchResults({ groups, total, query, loading, error, on
                           className="min-w-0 flex-1 text-left"
                         >
                           <div className="flex flex-wrap items-baseline gap-x-2">
-                            <span className="text-xs tabular-nums text-faint">{c.s_no ?? c.s_no_raw ?? '—'}</span>
+                            <span className="text-xs tabular-nums text-faint">{numberOf?.(device, c.id) ?? '↳'}</span>
                             <span className="text-sm font-semibold text-ink">{c.component || '—'}</span>
                             <span className="text-sm text-ink/85">{c.value || c.value_raw || '—'}</span>
                           </div>

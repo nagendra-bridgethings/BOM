@@ -16,7 +16,7 @@ const deviceOrder = (d) => {
 // and its own physical stock, so a combined figure would imply a shared bin that
 // does not exist — the total at the foot is there to answer "how many do we own
 // altogether", which is a different question from "how many can I use here".
-export default function SharedPartsModal({ open, onClose, part, locations = [], currentDevice, onGoTo, onAddToCart, inCart }) {
+export default function SharedPartsModal({ open, onClose, part, locations = [], currentDevice, onGoTo, onAddToCart, inCart, numberOf }) {
   const byDevice = new Map()
   for (const l of [...locations].sort(
     (a, b) => deviceOrder(a.device) - deviceOrder(b.device) || a.board.localeCompare(b.board),
@@ -58,7 +58,7 @@ export default function SharedPartsModal({ open, onClose, part, locations = [], 
                     <button onClick={() => onGoTo(l.device, l.board)} className="min-w-0 flex-1 text-left">
                       <div className="flex flex-wrap items-baseline gap-x-2">
                         <span className="text-xs tabular-nums text-faint">
-                          #{l.row.s_no ?? l.row.s_no_raw ?? '—'}
+                          #{numberOf?.(l.device, l.row.id) ?? '↳'}
                         </span>
                         <span className="text-sm font-medium text-ink">{l.board}</span>
                         <span className="font-mono text-xs text-ink/70">{l.row.package || '—'}</span>

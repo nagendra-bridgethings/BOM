@@ -161,6 +161,20 @@ export async function insertTransaction(device, payload) {
   return data
 }
 
+// Has this batch already landed for this device? Used before a retry: an insert
+// whose response was lost still committed, and re-sending it would issue the
+// same stock twice. Because the retry reuses the batch id, the rows are findable.
+export async function batchExists(device, batchId) {
+  const { transactions } = tablesFor(device)
+  const { data, error } = await supabase
+    .from(transactions)
+    .select('id')
+    .eq('batch_id', batchId)
+    .limit(1)
+  if (error) throw error
+  return Boolean(data && data.length)
+}
+
 // One insert for every row of a device — PostgREST applies a multi-row insert in
 // a single statement, so a device's batch lands whole or not at all. It cannot
 // span devices (they are separate tables, and the client has no cross-table
@@ -177,7 +191,7 @@ export async function insertTransactions(device, rows) {
 // only the cart writes — single-item outwards leave it null, so nothing here has
 // to guess from matching dates or reason text. One batch can span devices, so
 // every device is read and the rows are grouped by id afterwards.
-export async function fetchBatches(limit = 300) {
+export async function fetchBatches(limit = 2000) {
   const perDevice = await Promise.all(
     Object.keys(DEVICE_TABLES).map(async (device) => {
       const { components, transactions } = tablesFor(device)

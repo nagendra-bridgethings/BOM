@@ -6,7 +6,7 @@ import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber, matchesQuery } from './lib/format'
-import { buildCrossIndex, crossDeviceInfo, sharedKey } from './lib/shared'
+import { buildCrossIndex, buildNumberIndex, crossDeviceInfo, sharedKey } from './lib/shared'
 
 import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
@@ -118,6 +118,15 @@ function Dashboard() {
   // the table need to know what the other devices hold. `dataVersion` re-reads it
   // after a mutation so it can't drift from the device on screen.
   const { data: allDevices, loading: searchLoading, error: searchError } = useAllDevices(true, dataVersion)
+
+  // The board's component number for any row on any device, so search results,
+  // the cart and the cross-device dialog name a row the way its own board does
+  // rather than showing the stored per-row serial, which disagrees with it.
+  const numberIndex = useMemo(() => buildNumberIndex(allDevices), [allDevices])
+  const numberOf = useCallback(
+    (d, id) => numberIndex.get(`${d}::${id}`) ?? null,
+    [numberIndex],
+  )
 
   // Where a part exists across every device — the "View" button on a row. Kept
   // apart from the board grouping above: that arranges this list, this answers
@@ -552,6 +561,7 @@ function Dashboard() {
                   onGoTo={handleGoTo}
                   onAddToCart={(d, c) => cart.addMany(d, [c])}
                   inCart={cart.has}
+                  numberOf={numberOf}
                 />
               ) : (
               <ComponentTable
@@ -608,6 +618,7 @@ function Dashboard() {
         onGoTo={(d, b) => { setSharedPart(null); handleGoTo(d, b) }}
         onAddToCart={(d, c) => cart.addMany(d, [c])}
         inCart={cart.has}
+        numberOf={numberOf}
       />
 
       <CartModal
@@ -617,6 +628,7 @@ function Dashboard() {
         onSetQty={cart.setQty}
         onRemove={cart.removeLine}
         onDone={handleCartDone}
+        numberOf={numberOf}
       />
 
       <HistoryModal
