@@ -17,6 +17,15 @@ export function txnDelta(t) {
   return 0
 }
 
+// Does a component match a free-text query? Shared by the in-view filter and the
+// cross-device search so the two can't drift into matching different fields.
+export function matchesQuery(c, q) {
+  if (!q) return true
+  return [c.component, c.value_raw, c.value, c.label, c.part_number, c.package].some(
+    (v) => v && String(v).toLowerCase().includes(q),
+  )
+}
+
 // Small parsed chips (voltage / rating / material / tolerance) for the value cell.
 export function valueChips(c) {
   return [c.voltage, c.rating, c.material, c.tolerance].filter(Boolean)

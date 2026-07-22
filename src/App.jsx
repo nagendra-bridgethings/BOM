@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabaseConfigured } from './lib/supabase'
 import { deleteComponent } from './lib/db'
 import { useInventory } from './hooks/useInventory'
+import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
-import { liveQty, distinctValues, formatNumber } from './lib/format'
+import { liveQty, distinctValues, formatNumber, matchesQuery } from './lib/format'
 
 import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
 import Toolbar from './components/Toolbar'
 import ComponentTable from './components/ComponentTable'
+import SearchResults from './components/SearchResults'
 import ComponentFormModal from './components/ComponentFormModal'
 import TransactionModal from './components/TransactionModal'
 import HistoryModal from './components/HistoryModal'
@@ -92,17 +94,55 @@ function Dashboard() {
     [rows, subBoard],
   )
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return boardRows.filter((c) => {
-      if (typeFilter && c.component !== typeFilter) return false
-      if (lowOnly && !(c._qty > 0 && c._qty < LOW_STOCK_THRESHOLD)) return false
-      if (!q) return true
-      return [c.component, c.value_raw, c.value, c.label, c.part_number, c.package].some(
-        (v) => v && String(v).toLowerCase().includes(q),
-      )
-    })
-  }, [boardRows, search, typeFilter, lowOnly])
+  const query = search.trim().toLowerCase()
+  // A search covers every device, not just the one on screen — the same part
+  // lives on several boards and hunting it tab by tab was the whole complaint.
+  const searching = query.length > 0
+
+  const filtered = useMemo(
+    () =>
+      boardRows.filter((c) => {
+        if (typeFilter && c.component !== typeFilter) return false
+        if (lowOnly && !(c._qty > 0 && c._qty < LOW_STOCK_THRESHOLD)) return false
+        return matchesQuery(c, query)
+      }),
+    [boardRows, query, typeFilter, lowOnly],
+  )
+
+  const { data: allDevices, loading: searchLoading, error: searchError } = useAllDevices(searching)
+
+  // Matches across all three devices, grouped device -> board. Filters apply here
+  // too, so narrowing by type or low stock works the same whether you are
+  // searching everything or looking at one board.
+  const searchGroups = useMemo(() => {
+    if (!searching || !allDevices) return []
+    return DEVICES.map((d) => {
+      const bucket = allDevices[d.key]
+      if (!bucket) return null
+      const hits = bucket.components
+        .map((c) => {
+          const txns = bucket.byComponent[c.id] || []
+          return { ...c, _qty: liveQty(c, txns), _txnCount: txns.length }
+        })
+        .filter((c) => {
+          if (typeFilter && c.component !== typeFilter) return false
+          if (lowOnly && !(c._qty > 0 && c._qty < LOW_STOCK_THRESHOLD)) return false
+          return matchesQuery(c, query)
+        })
+      if (hits.length === 0) return null
+
+      const boards = orderSubBoards([...new Set(hits.map((h) => h.sub_board))]).map((board) => ({
+        board,
+        rows: hits.filter((h) => h.sub_board === board),
+      }))
+      return { device: d.key, boards }
+    }).filter(Boolean)
+  }, [searching, allDevices, query, typeFilter, lowOnly])
+
+  const searchTotal = useMemo(
+    () => searchGroups.reduce((s, g) => s + g.boards.reduce((n, b) => n + b.rows.length, 0), 0),
+    [searchGroups],
+  )
 
   // dropdown suggestions drawn from the whole device
   const options = useMemo(
@@ -117,7 +157,18 @@ function Dashboard() {
     }),
     [components],
   )
-  const typesPresent = options.component
+  // While searching, the type filter has to offer types from every device — a
+  // component type that exists only on LORA is otherwise unfilterable from 4G.
+  const typesPresent = useMemo(() => {
+    if (!searching || !allDevices) return options.component
+    const all = new Set(options.component)
+    for (const d of DEVICES) {
+      for (const c of allDevices[d.key]?.components || []) {
+        if (c.component) all.add(c.component)
+      }
+    }
+    return [...all].sort((a, b) => a.localeCompare(b))
+  }, [searching, allDevices, options.component])
 
   const meta = deviceMeta(device)
 
@@ -149,6 +200,15 @@ function Dashboard() {
     }
     if (savedSubBoard && savedSubBoard !== subBoard) setSubBoard(savedSubBoard)
     await reload()
+  }
+
+  // Jump from a search result to where the component actually lives. Clearing the
+  // search is what closes the results and reveals the board underneath — the two
+  // views are mutually exclusive.
+  function handleGoTo(targetDevice, targetBoard) {
+    setSubBoard(targetBoard)
+    if (targetDevice !== device) setDevice(targetDevice)
+    setSearch('')
   }
 
   function toggleSelect(id) {
@@ -297,10 +357,18 @@ function Dashboard() {
               {/* Board heading + sub-board segmented control */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-baseline gap-3">
-                  <h2 className="text-base font-semibold text-ink">{meta.blurb}</h2>
-                  <span className="text-sm tabular-nums text-faint">{formatNumber(boardRows.length)} components</span>
+                  <h2 className="text-base font-semibold text-ink">
+                    {searching ? 'Search results' : meta.blurb}
+                  </h2>
+                  <span className="text-sm tabular-nums text-faint">
+                    {searching
+                      ? `${formatNumber(searchTotal)} across all devices`
+                      : `${formatNumber(boardRows.length)} components`}
+                  </span>
                 </div>
-                {subBoards.length > 1 && (
+                {/* the board switcher has nothing to act on while results span every
+                    board, so it steps aside rather than sitting there inert */}
+                {!searching && subBoards.length > 1 && (
                   <div className="inline-flex divide-x divide-line overflow-hidden rounded-lg ring-1 ring-line">
                     {subBoards.map((b) => (
                       <button
@@ -338,7 +406,7 @@ function Dashboard() {
                 />
               </div>
 
-              {selectMode && (
+              {selectMode && !searching && (
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-primary/8 px-4 py-3 ring-1 ring-primary/25">
                   <span className="text-sm font-medium text-ink">
                     {selectedIds.size === 0 ? 'Tick the items you want to issue' : `${selectedIds.size} selected`}
@@ -358,12 +426,33 @@ function Dashboard() {
               {/* Result count */}
               <div className="mt-4 mb-2 flex items-center justify-between text-xs text-faint">
                 <span>
-                  Showing <span className="font-semibold text-mute">{filtered.length}</span> of {boardRows.length}
-                  {subBoard ? ` · ${subBoard}` : ''}
+                  {searching ? (
+                    <>
+                      Searching <span className="font-semibold text-mute">4G, RS485, LORA</span> — every board
+                      {searchLoading && <span className="ml-2">updating…</span>}
+                    </>
+                  ) : (
+                    <>
+                      Showing <span className="font-semibold text-mute">{filtered.length}</span> of {boardRows.length}
+                      {subBoard ? ` · ${subBoard}` : ''}
+                    </>
+                  )}
                 </span>
                 {error && <span className="text-coral">{error}</span>}
               </div>
 
+              {searching ? (
+                <SearchResults
+                  groups={searchGroups}
+                  total={searchTotal}
+                  query={search.trim()}
+                  loading={searchLoading}
+                  error={searchError}
+                  onGoTo={handleGoTo}
+                  onAddToCart={(d, c) => cart.addMany(d, [c])}
+                  inCart={cart.has}
+                />
+              ) : (
               <ComponentTable
                 rows={filtered}
                 onInward={(c) => setTxnState({ mode: 'inward', component: c })}
@@ -377,6 +466,7 @@ function Dashboard() {
                 onToggleSelect={toggleSelect}
                 onToggleAll={toggleAll}
               />
+              )}
             </>
           )}
         </ErrorBoundary>
