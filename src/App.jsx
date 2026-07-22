@@ -134,22 +134,27 @@ function Dashboard() {
     [sharedIndex, device, allDevices],
   )
 
-  // One entry per value on a board. Rows sharing a component and value — whether
-  // a straight repeat or the same value in another footprint — stay separate in
-  // the database, keeping their own designators, stock and actions. Only the
-  // first is listed at top level; the rest open beneath it. Listing them side by
-  // side made a board look like it held several stocks of one part, with the
-  // emptier row reading as "none left".
+  // Rows sharing a component and value are brought together so the board reads in
+  // groups. Nothing is hidden: every row stays in the list with its own
+  // designators, stock and actions — an earlier version tucked the rest behind a
+  // chip on the first one, which made serial numbers look like they were missing.
+  // Each row is tagged with its position in its group so the table can mark where
+  // one starts and which rows continue it.
   const displayRows = useMemo(() => {
-    const seen = new Set()
-    return filtered.filter((c) => {
+    const groups = new Map()
+    for (const c of filtered) {
       const k = sharedKey(c)
-      if (!k) return true
-      const groupKey = `${c.sub_board}||${k}`
-      if (seen.has(groupKey)) return false // already shown, nested under the first
-      seen.add(groupKey)
-      return true
-    })
+      // ungrouped rows get a key of their own so they keep their place in the list
+      const groupKey = k ? `${c.sub_board}||${k}` : `solo:${c.id}`
+      if (!groups.has(groupKey)) groups.set(groupKey, [])
+      groups.get(groupKey).push(c)
+    }
+    // Map keeps insertion order, so a group sits where its first row appeared
+    const out = []
+    for (const list of groups.values()) {
+      list.forEach((c, i) => out.push({ ...c, _groupSize: list.length, _groupIndex: i }))
+    }
+    return out
   }, [filtered])
 
   // Matches across all three devices, grouped device -> board. Filters apply here

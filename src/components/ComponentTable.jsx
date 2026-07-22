@@ -1,9 +1,8 @@
-import { Fragment, useState } from 'react'
 import QtyBadge from './QtyBadge'
 import Menu from './ui/Menu'
 import { valueChips } from '../lib/format'
 import { LOW_STOCK_THRESHOLD } from '../lib/constants'
-import { IconInward, IconOutward, IconReturn, IconHistory, IconEdit, IconTrash, IconLayers, IconChevronDown } from './ui/icons'
+import { IconInward, IconOutward, IconReturn, IconHistory, IconEdit, IconTrash, IconLayers } from './ui/icons'
 
 // Labelled stock-movement button. Direction colour lives on the icon
 // (teal = inward, coral = outward, neutral = return) so it reads at a glance.
@@ -46,26 +45,24 @@ function rowMenu(c, { onHistory, onEdit, onDelete }) {
 // module-level so the default prop keeps a stable identity between renders
 const EMPTY_SELECTION = new Set()
 
-// Marks a part that exists on other boards too, and opens the list of them.
-function SharedChip({ info, expanded, onClick }) {
-  if (!info) return null
-  // a split listing on one board is a data problem, not just a cross-reference
-  const dupe = info.duplicates.length > 0
+// Heads a run of rows describing the same part. Not a control — every row in the
+// group is already visible directly beneath it.
+function GroupChip({ size, split }) {
+  if (!size || size < 2) return null
   return (
-    <button
-      onClick={onClick}
-      aria-expanded={expanded}
-      title={dupe ? 'Stock for this part is split across more than one row' : 'Show the other boards that use this part'}
-      className={`mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 transition ${
-        dupe
-          ? 'bg-sun/12 text-sun ring-sun/30 hover:bg-sun/20'
-          : 'bg-primary/8 text-primary ring-primary/25 hover:bg-primary/15'
+    <span
+      title={
+        split
+          ? 'The same value and footprint is entered more than once, so its stock is split across these rows'
+          : 'The rows below describe the same value in another footprint'
+      }
+      className={`mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ${
+        split ? 'bg-sun/12 text-sun ring-sun/30' : 'bg-primary/8 text-primary ring-primary/25'
       }`}
     >
       <IconLayers width={11} height={11} />
-      {info.label}
-      <IconChevronDown width={11} height={11} className={expanded ? 'rotate-180' : ''} />
-    </button>
+      {size} on this board
+    </span>
   )
 }
 
@@ -89,14 +86,6 @@ export default function ComponentTable({
   selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
   sharedFor,
 }) {
-  // Rows the user has explicitly opened or closed, by component id. Anything not
-  // in here opens by default: every nested row is a row taken out of this list,
-  // so leaving them behind a collapsed chip makes the board look like it is
-  // missing serial numbers.
-  const [overrides, setOverrides] = useState(() => new Map())
-  const isOpen = (c, shared) => (overrides.has(c.id) ? overrides.get(c.id) : Boolean(shared))
-  const toggleExpanded = (c, shared) =>
-    setOverrides((prev) => new Map(prev).set(c.id, !isOpen(c, shared)))
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line bg-surface py-16 text-center">
@@ -115,23 +104,31 @@ export default function ComponentTable({
       <ul className="space-y-2 2xl:hidden">
         {rows.map((c) => {
           const chips = valueChips(c)
-          const shared = sharedFor?.(c)
-          const open = isOpen(c, shared)
+          const cont = c._groupIndex > 0 // continues the group started above
           return (
             <li
               key={c.id}
               className={`rounded-lg p-3 ring-1 ${stripeFor(c)} ${
-                selectMode && selectedIds.has(c.id) ? 'bg-primary/5 ring-primary/30' : 'bg-surface ring-line'
+                selectMode && selectedIds.has(c.id)
+                  ? 'bg-primary/5 ring-primary/30'
+                  : cont
+                    ? 'ml-3 bg-surface2/60 ring-line2'
+                    : 'bg-surface ring-line'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xs tabular-nums text-faint">{c.s_no ?? c.s_no_raw ?? '—'}</span>
+                    <span className="text-xs tabular-nums text-faint">
+                      {cont && <span className="mr-1">↳</span>}
+                      {c.s_no ?? c.s_no_raw ?? '—'}
+                    </span>
                     <span className="font-semibold text-ink">{c.component || '—'}</span>
                   </div>
                   <div className="mt-0.5 text-sm font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
-                  <SharedChip info={shared} expanded={open} onClick={() => toggleExpanded(c, shared)} />
+                  {!cont && (
+                    <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
+                  )}
                   {chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {chips.map((ch, i) => (
@@ -181,51 +178,6 @@ export default function ComponentTable({
                 </div>
               )}
 
-              {open && (
-                <ul className="mt-2 space-y-2 border-t border-line2 pt-2.5">
-                  {shared?.others.map((o) => (
-                    <li key={`${o.device}::${o.row.id}`} className="rounded-lg border-l-2 border-l-primary/40 bg-surface2/60 p-2.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-baseline gap-x-2">
-                            <span className="text-xs tabular-nums text-faint">
-                              #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
-                            </span>
-                            <span className="text-sm font-medium text-ink/90">
-                              {o.row.value || o.row.value_raw || '—'}
-                            </span>
-                          </div>
-                          {valueChips(o.row).length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {valueChips(o.row).map((ch, i) => (
-                                <span key={i} className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">{ch}</span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-faint">
-                            {/* the footprint can differ within a group, so it has to be legible */}
-                            <span className="font-mono text-ink/70">{o.row.package || '—'}</span>
-                            {o.row.part_number && <span className="font-mono">{o.row.part_number}</span>}
-                            {o.row.label && <span className="break-words">{o.row.label}</span>}
-                          </div>
-                        </div>
-                        <div className="shrink-0">
-                          {o.qty == null ? (
-                            <span className="text-xs text-faint">…</span>
-                          ) : (
-                            <QtyBadge qty={o.qty} note={o.row.quantity_note} hasActivity={o.txnCount > 0} />
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <MoveBtn label="Inward" tone="teal" className="flex-1" onClick={() => onInward(o.row, o.device)}><IconInward width={14} height={14} /></MoveBtn>
-                        <MoveBtn label="Outward" tone="coral" className="flex-1" onClick={() => onOutward(o.row, o.device)}><IconOutward width={14} height={14} /></MoveBtn>
-                        <MoveBtn label="Return" tone="neutral" className="flex-1" onClick={() => onReturn(o.row, o.device)}><IconReturn width={14} height={14} /></MoveBtn>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </li>
           )
         })}
@@ -264,19 +216,32 @@ export default function ComponentTable({
           <tbody className="divide-y divide-line2">
             {rows.map((c) => {
               const chips = valueChips(c)
-              const shared = sharedFor?.(c)
-              const open = isOpen(c, shared)
+              const cont = c._groupIndex > 0 // continues the group started above
               return (
-                <Fragment key={c.id}>
                 <tr
+                  key={c.id}
                   className={`transition ${
-                    selectMode && selectedIds.has(c.id) ? 'bg-primary/5' : 'hover:bg-surface2/70'
+                    selectMode && selectedIds.has(c.id)
+                      ? 'bg-primary/5'
+                      : cont
+                        ? 'bg-surface2/50 hover:bg-surface2/80'
+                        : 'hover:bg-surface2/70'
                   }`}
                 >
-                  <td className={`${td} ${stripeFor(c)} tabular-nums text-faint`}>{c.s_no ?? c.s_no_raw ?? '—'}</td>
+                  <td className={`${td} ${stripeFor(c)} whitespace-nowrap tabular-nums text-faint`}>
+                    {cont && <span className="mr-1">↳</span>}
+                    {c.s_no ?? c.s_no_raw ?? '—'}
+                  </td>
                   <td className={td}>
-                    <div className="font-semibold text-ink">{c.component || '—'}</div>
-                    <SharedChip info={shared} expanded={open} onClick={() => toggleExpanded(c, shared)} />
+                    {/* the group's first row names the part; the rest continue it */}
+                    {cont ? (
+                      <span className="text-sm text-faint">″</span>
+                    ) : (
+                      <>
+                        <div className="font-semibold text-ink">{c.component || '—'}</div>
+                        <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
+                      </>
+                    )}
                   </td>
                   <td className={`${td} max-w-[240px]`}>
                     <div className="font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
@@ -333,73 +298,6 @@ export default function ComponentTable({
                     </div>
                   </td>
                 </tr>
-
-                {/* The same part on other boards, opened under the row it belongs
-                    to rather than in a dialog — it reads as part of this entry,
-                    which is what it is. Each keeps its own stock and its own
-                    actions, since they are separate rows in separate tables. */}
-                {open && shared?.others.map((o) => (
-                  <tr key={`${o.device}::${o.row.id}`} className="bg-surface2/50">
-                    {/* one cell per column, same as the parent — a merged cell
-                        left Value looking empty on the rows underneath */}
-                    <td className={`${td} border-l-2 border-l-primary/40 whitespace-nowrap tabular-nums text-faint`}>
-                      <span className="text-faint">↳</span>{' '}
-                      <span className="text-xs">{o.row.s_no ?? o.row.s_no_raw ?? '—'}</span>
-                    </td>
-                    <td className={td} />
-                    <td className={`${td} max-w-[240px]`}>
-                      <div className="font-medium text-ink/90">{o.row.value || o.row.value_raw || '—'}</div>
-                      {valueChips(o.row).length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {valueChips(o.row).map((ch, i) => (
-                            <span key={i} className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">{ch}</span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className={`${td} max-w-[190px]`}>
-                      <span className="break-words text-xs text-mute">{o.row.label || '—'}</span>
-                    </td>
-                    <td className={td}>
-                      <span className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink/80 ring-1 ring-line2">
-                        {o.row.package || '—'}
-                      </span>
-                    </td>
-                    <td className={td}>
-                      <span className="font-mono text-xs text-mute">{o.row.part_number || '—'}</span>
-                    </td>
-                    <td className={td}>
-                      <span className="font-mono text-xs text-mute">{o.row.identification_number || '—'}</span>
-                    </td>
-                    <td className={td}>
-                      {o.row.supply_form ? (
-                        <span className="whitespace-nowrap rounded bg-surface px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">
-                          {o.row.supply_form}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-faint">—</span>
-                      )}
-                    </td>
-                    <td className={`${td} text-right`}>
-                      {o.qty == null ? (
-                        <span className="text-xs text-faint">…</span>
-                      ) : (
-                        <QtyBadge qty={o.qty} note={o.row.quantity_note} hasActivity={o.txnCount > 0} />
-                      )}
-                    </td>
-                    <td className={`${td} pr-3`}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <MoveBtn label="Inward" tone="teal" onClick={() => onInward(o.row, o.device)}><IconInward width={14} height={14} /></MoveBtn>
-                        <MoveBtn label="Outward" tone="coral" onClick={() => onOutward(o.row, o.device)}><IconOutward width={14} height={14} /></MoveBtn>
-                        <MoveBtn label="Return" tone="neutral" onClick={() => onReturn(o.row, o.device)}><IconReturn width={14} height={14} /></MoveBtn>
-                        <Menu items={[
-                          { label: 'History', icon: <IconHistory width={15} height={15} />, onClick: () => onHistory(o.row, o.device) },
-                        ]} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                </Fragment>
               )
             })}
           </tbody>
