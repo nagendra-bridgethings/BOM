@@ -191,10 +191,17 @@ export default function ComponentTable({
                             <span className="text-xs tabular-nums text-faint">
                               #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
                             </span>
-                            <span className="text-sm text-ink/85">
+                            <span className="text-sm font-medium text-ink/90">
                               {o.row.value || o.row.value_raw || '—'}
                             </span>
                           </div>
+                          {valueChips(o.row).length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {valueChips(o.row).map((ch, i) => (
+                                <span key={i} className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">{ch}</span>
+                              ))}
+                            </div>
+                          )}
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-faint">
                             {/* the footprint can differ within a group, so it has to be legible */}
                             <span className="font-mono text-ink/70">{o.row.package || '—'}</span>
@@ -333,17 +340,22 @@ export default function ComponentTable({
                     actions, since they are separate rows in separate tables. */}
                 {open && shared?.others.map((o) => (
                   <tr key={`${o.device}::${o.row.id}`} className="bg-surface2/50">
-                    <td className={`${td} border-l-2 border-l-primary/40`} />
-                    <td className={td} colSpan={2}>
-                      <div className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-faint">↳</span>
-                        <span className="text-xs tabular-nums text-faint">
-                          #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
-                        </span>
-                        <span className="text-sm text-ink/85">
-                          {o.row.value || o.row.value_raw || '—'}
-                        </span>
-                      </div>
+                    {/* one cell per column, same as the parent — a merged cell
+                        left Value looking empty on the rows underneath */}
+                    <td className={`${td} border-l-2 border-l-primary/40 whitespace-nowrap tabular-nums text-faint`}>
+                      <span className="text-faint">↳</span>{' '}
+                      <span className="text-xs">{o.row.s_no ?? o.row.s_no_raw ?? '—'}</span>
+                    </td>
+                    <td className={td} />
+                    <td className={`${td} max-w-[240px]`}>
+                      <div className="font-medium text-ink/90">{o.row.value || o.row.value_raw || '—'}</div>
+                      {valueChips(o.row).length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {valueChips(o.row).map((ch, i) => (
+                            <span key={i} className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">{ch}</span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className={`${td} max-w-[190px]`}>
                       <span className="break-words text-xs text-mute">{o.row.label || '—'}</span>
