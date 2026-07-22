@@ -5,7 +5,7 @@ import { Field, TextInput, NumberInput, Button } from './ui/controls'
 import { IconChip } from './ui/icons'
 import { COMPONENT_TYPES, DEVICES, DEVICE_SUB_BOARDS, FIELD_META, MAX_QTY, SUPPLY_FORMS, valueFieldsFor } from '../lib/constants'
 import { formatNumber } from '../lib/format'
-import { insertComponent, updateComponent, nextRowMeta } from '../lib/db'
+import { insertComponent, updateComponent, nextRowMeta, renumberBoard } from '../lib/db'
 
 const EMPTY = {
   device: '', sub_board: '', component: '', value: '', voltage: '', rating: '', material: '',
@@ -146,13 +146,21 @@ export default function ComponentFormModal({ open, onClose, onSaved, device, sub
         }
         await updateComponent(targetDevice, initial.id, payload)
       } else {
-        // serial and position are assigned automatically from existing data
+        // a placeholder at the end — renumberBoard then moves it beside the rows
+        // it matches and renumbers the board around it
         const { nextSNo, nextSortOrder } = await nextRowMeta(targetDevice, targetBoard)
         payload.s_no = nextSNo
         payload.s_no_raw = String(nextSNo)
         payload.sort_order = nextSortOrder
         await insertComponent(targetDevice, payload)
       }
+
+      // A new row joins the group it matches rather than sitting at the bottom,
+      // and an edited value can move it between groups — either way the board's
+      // numbering has to close up behind it.
+      await renumberBoard(targetDevice, targetBoard)
+      if (isEdit && boardChanged) await renumberBoard(targetDevice, initial.sub_board)
+
       await onSaved?.(targetDevice, targetBoard)
       onClose?.()
     } catch (e) {

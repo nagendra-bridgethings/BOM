@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabaseConfigured } from './lib/supabase'
-import { deleteComponent } from './lib/db'
+import { deleteComponent, renumberBoard } from './lib/db'
 import { useInventory } from './hooks/useInventory'
 import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
@@ -318,6 +318,7 @@ function Dashboard() {
     if (!window.confirm(`Delete "${c.component} — ${c.value_raw || c.label || ''}" and all its transactions?`)) return
     try {
       await deleteComponent(device, c.id)
+      await renumberBoard(device, c.sub_board) // close the gap it leaves
       await refreshAll()
     } catch (e) {
       window.alert(e.message || String(e))

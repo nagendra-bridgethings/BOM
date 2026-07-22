@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { DEVICE_TABLES, tablesFor } from './constants'
+import { sharedKey } from './shared'
 
 // Separate tables per device (4G / RS485 / LORA). Every call takes the active
 // device so it hits the right pair of tables:
@@ -58,6 +59,56 @@ export async function nextRowMeta(device, subBoard) {
     .reduce((m, r) => Math.max(m, Number(r.s_no) || 0), 0)
   const maxOrder = rows.reduce((m, r) => Math.max(m, Number(r.sort_order) || 0), 0)
   return { nextSNo: maxSNo + 1, nextSortOrder: maxOrder + 1 }
+}
+
+// Put a board back in order and renumber it 1..n.
+//
+// The table groups rows by component and value, so a part added later belongs
+// beside the ones it matches, not at the bottom where its serial was assigned.
+// Without this a single add breaks the numbering: a new 100nF lands as #62 but
+// displays third, and the column reads 1, 2, 62, 3.
+//
+// Runs after any add, delete, or edit that changes a row's value or board. Only
+// rows whose number actually moved are written, and those go in parallel — a
+// board is at most ~60 rows, so this is one round trip plus a short burst.
+export async function renumberBoard(device, subBoard) {
+  if (!subBoard) return
+  const { components } = tablesFor(device)
+  const { data, error } = await supabase
+    .from(components)
+    .select('id, sort_order, s_no, component, value, value_raw')
+    .eq('sub_board', subBoard)
+    .order('sort_order', { ascending: true })
+    .order('s_no', { ascending: true, nullsFirst: false })
+  if (error) throw error
+  if (!data || data.length === 0) return
+
+  // group in first-seen order, exactly as the table renders it
+  const groups = new Map()
+  for (const c of data) {
+    const k = sharedKey(c)
+    const groupKey = k || `solo:${c.id}`
+    if (!groups.has(groupKey)) groups.set(groupKey, [])
+    groups.get(groupKey).push(c)
+  }
+
+  const ordered = [...groups.values()].flat()
+  const moved = ordered
+    .map((c, i) => ({ c, n: i + 1 }))
+    .filter(({ c, n }) => c.sort_order !== n || c.s_no !== n)
+  if (moved.length === 0) return
+
+  await Promise.all(
+    moved.map(({ c, n }) =>
+      supabase
+        .from(components)
+        .update({ sort_order: n, s_no: n, s_no_raw: String(n) })
+        .eq('id', c.id)
+        .then(({ error: e }) => {
+          if (e) throw e
+        }),
+    ),
+  )
 }
 
 export async function insertComponent(device, payload) {
