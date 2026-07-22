@@ -139,6 +139,18 @@ function Dashboard() {
     setSharedPart({ part: c, locations })
   }
 
+  // How many components a set of rows holds, counting a value and its other
+  // footprints as one. Keeps the headline consistent with the numbering, which
+  // stops at the last component rather than the last row.
+  const countComponents = useCallback((list) => {
+    const seen = new Set()
+    for (const c of list) {
+      const k = sharedKey(c)
+      seen.add(k ? `${c.sub_board}||${k}` : `solo:${c.id}`)
+    }
+    return seen.size
+  }, [])
+
   // Rows sharing a component and value are brought together so the board reads in
   // groups. Nothing is hidden: every row stays in the list with its own
   // designators, stock and actions — an earlier version tucked the rest behind a
@@ -154,10 +166,15 @@ function Dashboard() {
       if (!groups.has(groupKey)) groups.set(groupKey, [])
       groups.get(groupKey).push(c)
     }
-    // Map keeps insertion order, so a group sits where its first row appeared
+    // Map keeps insertion order, so a group sits where its first row appeared.
+    // The number counts components, not rows: a second footprint of the same
+    // value is a variant of the entry above, not an entry of its own, so it
+    // carries no number and the next component takes the next one.
     const out = []
+    let no = 0
     for (const list of groups.values()) {
-      list.forEach((c, i) => out.push({ ...c, _groupSize: list.length, _groupIndex: i }))
+      no += 1
+      list.forEach((c, i) => out.push({ ...c, _groupSize: list.length, _groupIndex: i, _groupNo: no }))
     }
     return out
   }, [filtered])
@@ -439,7 +456,7 @@ function Dashboard() {
                   <span className="text-sm tabular-nums text-faint">
                     {searching
                       ? `${formatNumber(searchTotal)} across all devices`
-                      : `${formatNumber(boardRows.length)} components`}
+                      : `${formatNumber(countComponents(boardRows))} components`}
                   </span>
                 </div>
                 {/* the board switcher has nothing to act on while results span every
@@ -509,7 +526,7 @@ function Dashboard() {
                     </>
                   ) : (
                     <>
-                      Showing <span className="font-semibold text-mute">{displayRows.length}</span> of {boardRows.length}
+                      Showing <span className="font-semibold text-mute">{countComponents(filtered)}</span> of {countComponents(boardRows)}
                       {subBoard ? ` · ${subBoard}` : ''}
                     </>
                   )}

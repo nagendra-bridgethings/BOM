@@ -114,8 +114,7 @@ export default function ComponentTable({
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
                     <span className="text-xs tabular-nums text-faint">
-                      {cont && <span className="mr-1">↳</span>}
-                      {c.s_no ?? c.s_no_raw ?? '—'}
+                      {cont ? '↳' : c._groupNo}
                     </span>
                     <span className="font-semibold text-ink">{c.component || '—'}</span>
                   </div>
@@ -220,9 +219,10 @@ export default function ComponentTable({
                         : 'hover:bg-surface2/70'
                   }`}
                 >
+                  {/* the number belongs to the component, so a variant of the row
+                      above shows only the marker tying it to it */}
                   <td className={`${td} ${stripeFor(c)} whitespace-nowrap tabular-nums text-faint`}>
-                    {cont && <span className="mr-1">↳</span>}
-                    {c.s_no ?? c.s_no_raw ?? '—'}
+                    {cont ? <span className="text-faint">↳</span> : c._groupNo}
                   </td>
                   <td className={td}>
                     {/* the group's first row names the part; the rest continue it */}
