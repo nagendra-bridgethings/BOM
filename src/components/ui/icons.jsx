@@ -67,3 +67,9 @@ export const IconAlert = (p) => (
 export const IconDots = (p) => (
   <svg {...base} fill="currentColor" stroke="none" {...p}><circle cx="12" cy="5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="19" r="1.6" /></svg>
 )
+export const IconCart = (p) => (
+  <svg {...base} {...p}><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /><path d="M2 3h3l2.7 12.1a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6" /></svg>
+)
+export const IconCheck = (p) => (
+  <svg {...base} {...p}><path d="m5 12 5 5L20 7" /></svg>
+)

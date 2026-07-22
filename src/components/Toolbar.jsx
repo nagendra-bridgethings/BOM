@@ -1,9 +1,10 @@
 import { Button } from './ui/controls'
-import { IconSearch, IconPlus, IconRefresh, IconFilter, IconChevronDown } from './ui/icons'
+import { IconSearch, IconPlus, IconRefresh, IconFilter, IconChevronDown, IconCheck } from './ui/icons'
 
 export default function Toolbar({
   search, onSearch, typeFilter, onTypeFilter, types,
   lowOnly, onToggleLow, onAdd, onRefresh, loading,
+  selectMode, onToggleSelectMode,
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -55,6 +56,18 @@ export default function Toolbar({
         className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-line bg-surface2 p-2 text-faint transition hover:bg-raise hover:text-ink 2xl:min-h-0 2xl:min-w-0"
       >
         <IconRefresh className={loading ? 'animate-spin' : ''} />
+      </button>
+
+      <button
+        onClick={onToggleSelectMode}
+        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+          selectMode
+            ? 'border-primary/40 bg-primary/10 text-primary'
+            : 'border-line bg-surface2 text-mute hover:bg-raise hover:text-ink'
+        }`}
+      >
+        <IconCheck width={15} height={15} />
+        {selectMode ? 'Done' : 'Select'}
       </button>
 
       <Button variant="primary" onClick={onAdd} className="ml-auto sm:ml-0">

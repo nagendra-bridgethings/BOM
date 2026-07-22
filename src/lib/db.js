@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { tablesFor } from './constants'
+import { DEVICE_TABLES, tablesFor } from './constants'
 
 // Separate tables per device (4G / RS485 / LORA). Every call takes the active
 // device so it hits the right pair of tables:
@@ -107,6 +107,82 @@ export async function insertTransaction(device, payload) {
     .single()
   if (error) throw error
   return data
+}
+
+// One insert for every row of a device — PostgREST applies a multi-row insert in
+// a single statement, so a device's batch lands whole or not at all. It cannot
+// span devices (they are separate tables, and the client has no cross-table
+// transaction), so a bulk outward commits per device and reports which succeeded.
+export async function insertTransactions(device, rows) {
+  if (!rows || rows.length === 0) return []
+  const { transactions } = tablesFor(device)
+  const { data, error } = await supabase.from(transactions).insert(rows).select()
+  if (error) throw error
+  return data
+}
+
+// Past bulk outwards, newest first. A batch is identified by batch_id, which
+// only the cart writes — single-item outwards leave it null, so nothing here has
+// to guess from matching dates or reason text. One batch can span devices, so
+// every device is read and the rows are grouped by id afterwards.
+export async function fetchBatches(limit = 300) {
+  const perDevice = await Promise.all(
+    Object.keys(DEVICE_TABLES).map(async (device) => {
+      const { components, transactions } = tablesFor(device)
+      const { data: txns, error } = await supabase
+        .from(transactions)
+        .select('*')
+        .not('batch_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      if (!txns || txns.length === 0) return []
+
+      const ids = [...new Set(txns.map((t) => t.component_id))]
+      const { data: comps, error: cErr } = await supabase
+        .from(components)
+        .select('id, component, value_raw, value, sub_board, s_no, s_no_raw, package')
+        .in('id', ids)
+      if (cErr) throw cErr
+      const byId = Object.fromEntries((comps || []).map((c) => [c.id, c]))
+      return txns.map((t) => ({ ...t, device, component: byId[t.component_id] || null }))
+    }),
+  )
+
+  const batches = new Map()
+  for (const row of perDevice.flat()) {
+    if (!batches.has(row.batch_id)) {
+      batches.set(row.batch_id, {
+        batch_id: row.batch_id,
+        txn_date: row.txn_date,
+        reason: row.reason,
+        created_at: row.created_at,
+        lines: [],
+      })
+    }
+    const b = batches.get(row.batch_id)
+    b.lines.push(row)
+    // a batch is written device by device, so keep the earliest stamp as its time
+    if (row.created_at < b.created_at) b.created_at = row.created_at
+  }
+
+  return [...batches.values()]
+    .map((b) => ({
+      ...b,
+      devices: [...new Set(b.lines.map((l) => l.device))],
+      totalUnits: b.lines.reduce((s, l) => s + (Number(l.qty_sent) || 0), 0),
+    }))
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+}
+
+// Components + transactions for one device, for computing live stock outside the
+// loaded device — the cart spans devices and has to check all of them.
+export async function fetchDeviceStock(device) {
+  const components = await fetchComponents(device)
+  const txns = await fetchTransactions(device, components.map((c) => c.id))
+  const byComponent = {}
+  for (const t of txns) (byComponent[t.component_id] ||= []).push(t)
+  return { components, byComponent }
 }
 
 export async function deleteTransaction(device, id) {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabaseConfigured } from './lib/supabase'
 import { deleteComponent } from './lib/db'
 import { useInventory } from './hooks/useInventory'
+import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber } from './lib/format'
 
@@ -12,6 +13,10 @@ import ComponentTable from './components/ComponentTable'
 import ComponentFormModal from './components/ComponentFormModal'
 import TransactionModal from './components/TransactionModal'
 import HistoryModal from './components/HistoryModal'
+import CartModal from './components/CartModal'
+import BatchHistoryModal from './components/BatchHistoryModal'
+import { Button } from './components/ui/controls'
+import { IconCart, IconHistory } from './components/ui/icons'
 
 export default function App() {
   return supabaseConfigured ? <Dashboard /> : <SetupScreen />
@@ -30,6 +35,13 @@ function Dashboard() {
   const [formInitial, setFormInitial] = useState(null)
   const [txnState, setTxnState] = useState(null) // { mode, component }
   const [historyComp, setHistoryComp] = useState(null)
+  const [cartOpen, setCartOpen] = useState(false)
+  const [batchesOpen, setBatchesOpen] = useState(false)
+
+  // bulk outward: tick rows on any device, queue them, issue them in one go
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const cart = useCart()
 
   const { components, txnsByComponent, loadedDevice, loading, error, reload } = useInventory(device)
 
@@ -65,6 +77,13 @@ function Dashboard() {
     setSearch('')
     setTypeFilter('')
     setLowOnly(false)
+  }, [device, subBoard])
+
+  // Selection is per view — ids belong to one device's table, so carrying them
+  // across a device or board switch would tick unrelated rows. The cart is what
+  // persists; this is just the pending tick list.
+  useEffect(() => {
+    setSelectedIds(new Set())
   }, [device, subBoard])
 
   // rows for the selected sub-board
@@ -132,6 +151,47 @@ function Dashboard() {
     await reload()
   }
 
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // "All" acts only on what's currently shown — ticking a header box must never
+  // queue rows the user can't see, and un-ticking it must not silently drop
+  // selections made under a different search or filter.
+  function toggleAll(on) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const r of filtered) {
+        if (on) next.add(r.id)
+        else next.delete(r.id)
+      }
+      return next
+    })
+  }
+
+  // Resolved against every row of the device, not the filtered view — a search
+  // typed after ticking would otherwise drop the hidden picks without a word.
+  function addSelectedToCart() {
+    const picked = rows.filter((r) => selectedIds.has(r.id))
+    if (picked.length === 0) return
+    cart.addMany(device, picked)
+    setSelectedIds(new Set())
+  }
+
+  // Devices whose batch committed leave the cart; anything that failed stays
+  // queued so a retry can't issue the same stock twice.
+  async function handleCartDone(doneDevices) {
+    if (doneDevices.length > 0) {
+      cart.removeDevices(doneDevices)
+      if (doneDevices.includes(device)) await reload()
+    }
+  }
+
   async function handleDelete(c) {
     if (!window.confirm(`Delete "${c.component} — ${c.value_raw || c.label || ''}" and all its transactions?`)) return
     try {
@@ -162,9 +222,35 @@ function Dashboard() {
                 <p className="truncate text-xs text-mute">Water Meter Board Inventory</p>
               </div>
             </div>
-            <div className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-mute">
-              <span className="h-1.5 w-1.5 rounded-full bg-faint" />
-              <span className="hidden sm:inline">Supabase connected</span>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => setBatchesOpen(true)}
+                title="Bulk outward history"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-line bg-surface2 px-3 py-2 text-sm font-medium text-mute transition hover:bg-raise hover:text-ink"
+              >
+                <IconHistory width={15} height={15} />
+                <span className="hidden md:inline">Batches</span>
+              </button>
+              <button
+                onClick={() => setCartOpen(true)}
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                  cart.count > 0
+                    ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15'
+                    : 'border-line bg-surface2 text-mute hover:bg-raise hover:text-ink'
+                }`}
+              >
+                <IconCart width={15} height={15} />
+                <span className="hidden sm:inline">Cart</span>
+                {cart.count > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-white">
+                    {cart.count}
+                  </span>
+                )}
+              </button>
+              <div className="hidden items-center gap-2 text-xs font-medium text-mute lg:inline-flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-faint" />
+                <span>Supabase connected</span>
+              </div>
             </div>
           </div>
 
@@ -244,8 +330,30 @@ function Dashboard() {
                   onAdd={() => { setFormInitial(null); setFormOpen(true) }}
                   onRefresh={reload}
                   loading={loading}
+                  selectMode={selectMode}
+                  onToggleSelectMode={() => {
+                    setSelectMode((v) => !v)
+                    setSelectedIds(new Set())
+                  }}
                 />
               </div>
+
+              {selectMode && (
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-primary/8 px-4 py-3 ring-1 ring-primary/25">
+                  <span className="text-sm font-medium text-ink">
+                    {selectedIds.size === 0 ? 'Tick the items you want to issue' : `${selectedIds.size} selected`}
+                  </span>
+                  <span className="text-xs text-mute">Queued items stay in the cart while you switch device.</span>
+                  <div className="ml-auto flex items-center gap-2">
+                    {selectedIds.size > 0 && (
+                      <Button variant="soft" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                    )}
+                    <Button variant="primary" onClick={addSelectedToCart} disabled={selectedIds.size === 0}>
+                      Add to cart
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Result count */}
               <div className="mt-4 mb-2 flex items-center justify-between text-xs text-faint">
@@ -264,6 +372,10 @@ function Dashboard() {
                 onHistory={(c) => setHistoryComp(c)}
                 onEdit={(c) => { setFormInitial(c); setFormOpen(true) }}
                 onDelete={handleDelete}
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleAll={toggleAll}
               />
             </>
           )}
@@ -290,6 +402,17 @@ function Dashboard() {
         component={activeComp}
         currentQty={activeQty}
         openOutwards={openOutwards}
+      />
+
+      <BatchHistoryModal open={batchesOpen} onClose={() => setBatchesOpen(false)} />
+
+      <CartModal
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        lines={cart.lines}
+        onSetQty={cart.setQty}
+        onRemove={cart.removeLine}
+        onDone={handleCartDone}
       />
 
       <HistoryModal

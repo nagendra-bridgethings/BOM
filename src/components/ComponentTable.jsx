@@ -42,7 +42,28 @@ function rowMenu(c, { onHistory, onEdit, onDelete }) {
   ]
 }
 
-export default function ComponentTable({ rows, onInward, onOutward, onReturn, onHistory, onEdit, onDelete }) {
+// module-level so the default prop keeps a stable identity between renders
+const EMPTY_SELECTION = new Set()
+
+// In select mode the checkbox takes the place of the action buttons rather than
+// sitting beside them — the row is already tight on a phone, and a fourth control
+// would push the ⋯ menu out of reach.
+function SelectBox({ checked, onChange, label }) {
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      aria-label={label}
+      className="size-5 shrink-0 cursor-pointer accent-primary"
+    />
+  )
+}
+
+export default function ComponentTable({
+  rows, onInward, onOutward, onReturn, onHistory, onEdit, onDelete,
+  selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
+}) {
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line bg-surface py-16 text-center">
@@ -53,6 +74,7 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
   }
 
   const handlers = { onHistory, onEdit, onDelete }
+  const allSelected = selectMode && rows.length > 0 && rows.every((r) => selectedIds.has(r.id))
 
   return (
     <>
@@ -61,7 +83,12 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
         {rows.map((c) => {
           const chips = valueChips(c)
           return (
-            <li key={c.id} className={`rounded-lg bg-surface p-3 ring-1 ring-line ${stripeFor(c)}`}>
+            <li
+              key={c.id}
+              className={`rounded-lg p-3 ring-1 ${stripeFor(c)} ${
+                selectMode && selectedIds.has(c.id) ? 'bg-primary/5 ring-primary/30' : 'bg-surface ring-line'
+              }`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
@@ -92,12 +119,23 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
               </div>
               {c.label && <p className="mt-1 break-words text-xs text-mute">{c.label}</p>}
 
-              <div className="mt-3 flex items-center gap-1.5 border-t border-line2 pt-2.5">
-                <MoveBtn label="Inward" tone="teal" className="flex-1" onClick={() => onInward(c)}><IconInward width={14} height={14} /></MoveBtn>
-                <MoveBtn label="Outward" tone="coral" className="flex-1" onClick={() => onOutward(c)}><IconOutward width={14} height={14} /></MoveBtn>
-                <MoveBtn label="Return" tone="neutral" className="flex-1" onClick={() => onReturn(c)}><IconReturn width={14} height={14} /></MoveBtn>
-                <Menu items={rowMenu(c, handlers)} />
-              </div>
+              {selectMode ? (
+                <label className="mt-3 flex cursor-pointer items-center gap-2.5 border-t border-line2 pt-2.5 text-sm text-mute">
+                  <SelectBox
+                    checked={selectedIds.has(c.id)}
+                    onChange={() => onToggleSelect(c.id)}
+                    label={`Select ${c.component || 'component'}`}
+                  />
+                  {selectedIds.has(c.id) ? 'Selected' : 'Select'}
+                </label>
+              ) : (
+                <div className="mt-3 flex items-center gap-1.5 border-t border-line2 pt-2.5">
+                  <MoveBtn label="Inward" tone="teal" className="flex-1" onClick={() => onInward(c)}><IconInward width={14} height={14} /></MoveBtn>
+                  <MoveBtn label="Outward" tone="coral" className="flex-1" onClick={() => onOutward(c)}><IconOutward width={14} height={14} /></MoveBtn>
+                  <MoveBtn label="Return" tone="neutral" className="flex-1" onClick={() => onReturn(c)}><IconReturn width={14} height={14} /></MoveBtn>
+                  <Menu items={rowMenu(c, handlers)} />
+                </div>
+              )}
             </li>
           )
         })}
@@ -115,14 +153,32 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
               <th className={th}>Package</th>
               <th className={th}>Part No.</th>
               <th className={`${th} text-right`}>In Hand</th>
-              <th className={`${th} pr-4 text-right`}>Actions</th>
+              <th className={`${th} pr-4 text-right`}>
+                {selectMode ? (
+                  <label className="inline-flex cursor-pointer items-center gap-2 normal-case">
+                    <SelectBox
+                      checked={allSelected}
+                      onChange={() => onToggleAll(!allSelected)}
+                      label="Select all shown"
+                    />
+                    All
+                  </label>
+                ) : (
+                  'Actions'
+                )}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line2">
             {rows.map((c) => {
               const chips = valueChips(c)
               return (
-                <tr key={c.id} className="transition hover:bg-surface2/70">
+                <tr
+                  key={c.id}
+                  className={`transition ${
+                    selectMode && selectedIds.has(c.id) ? 'bg-primary/5' : 'hover:bg-surface2/70'
+                  }`}
+                >
                   <td className={`${td} ${stripeFor(c)} tabular-nums text-faint`}>{c.s_no ?? c.s_no_raw ?? '—'}</td>
                   <td className={td}>
                     <div className="font-semibold text-ink">{c.component || '—'}</div>
@@ -151,10 +207,20 @@ export default function ComponentTable({ rows, onInward, onOutward, onReturn, on
                   </td>
                   <td className={`${td} pr-3`}>
                     <div className="flex items-center justify-end gap-1.5">
-                      <MoveBtn label="Inward" tone="teal" onClick={() => onInward(c)}><IconInward width={14} height={14} /></MoveBtn>
-                      <MoveBtn label="Outward" tone="coral" onClick={() => onOutward(c)}><IconOutward width={14} height={14} /></MoveBtn>
-                      <MoveBtn label="Return" tone="neutral" onClick={() => onReturn(c)}><IconReturn width={14} height={14} /></MoveBtn>
-                      <Menu items={rowMenu(c, handlers)} />
+                      {selectMode ? (
+                        <SelectBox
+                          checked={selectedIds.has(c.id)}
+                          onChange={() => onToggleSelect(c.id)}
+                          label={`Select ${c.component || 'component'}`}
+                        />
+                      ) : (
+                        <>
+                          <MoveBtn label="Inward" tone="teal" onClick={() => onInward(c)}><IconInward width={14} height={14} /></MoveBtn>
+                          <MoveBtn label="Outward" tone="coral" onClick={() => onOutward(c)}><IconOutward width={14} height={14} /></MoveBtn>
+                          <MoveBtn label="Return" tone="neutral" onClick={() => onReturn(c)}><IconReturn width={14} height={14} /></MoveBtn>
+                          <Menu items={rowMenu(c, handlers)} />
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
