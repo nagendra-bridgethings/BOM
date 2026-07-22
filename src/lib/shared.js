@@ -3,10 +3,12 @@
 // Each device has its own table, so a part used on more than one board exists as
 // several unrelated rows. These build the link between them.
 //
-// Identity is component + value + package, matched case- and spacing-insensitively.
-// Package is part of the key on purpose: a 100nF in C0402 and a 100nF in C0805 are
-// different parts that cannot substitute for each other. Part numbers are left out
-// — they are blank on many rows and differ between suppliers for the same part.
+// Identity is component + value, matched case- and spacing-insensitively. Package
+// is NOT part of it: every 100nF capacitor belongs together regardless of
+// footprint, so the whole holding of a value is visible in one place. The
+// footprint still shows on each nested row, since a C0603 will not fit a C0402
+// pad. Part numbers are left out too — blank on many rows, and different
+// suppliers give the same part different codes.
 
 const norm = (v) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 
@@ -18,7 +20,7 @@ export function sharedKey(c) {
   // Without both a type and a value there is nothing meaningful to match on —
   // this is what keeps Sample Board, Bare PCBs and the like from all colliding.
   if (!component || !value) return null
-  return `${component}|${value}|${norm(c.package)}`
+  return `${component}|${value}`
 }
 
 // key -> [{ device, board, row }], keeping only keys that appear more than once.
@@ -48,16 +50,19 @@ export function sharedInfo(index, c, device) {
   if (others.length === 0) return null
 
   const otherDevices = [...new Set(others.map((o) => o.device))].filter((d) => d !== device)
-  // The same part listed twice on one board splits its stock in two, so one row
-  // reads 0 while the other holds everything. That misleads far more than a part
-  // being shared across devices does, so it leads the label.
-  const duplicates = others.filter((o) => o.device === device && o.board === c.sub_board)
+  const sameBoard = others.filter((o) => o.device === device && o.board === c.sub_board)
 
-  const label = duplicates.length
-    ? `Listed ${duplicates.length + 1}× on this board`
+  // Split stock is the case worth warning about: the same value in the same
+  // footprint entered as two rows, so one reads 0 while the other holds the lot.
+  // A different footprint on the same board is a variant, not a mistake.
+  const pkg = norm(c.package)
+  const duplicates = sameBoard.filter((o) => norm(o.row.package) === pkg)
+
+  const label = sameBoard.length
+    ? `${sameBoard.length + 1} on this board`
     : otherDevices.length
       ? `Also in ${otherDevices.join(', ')}`
       : `Also on ${[...new Set(others.map((o) => o.board))].join(', ')}`
 
-  return { all, others, otherDevices, duplicates, label }
+  return { all, others, otherDevices, sameBoard, duplicates, label }
 }

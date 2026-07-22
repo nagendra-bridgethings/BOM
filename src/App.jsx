@@ -141,24 +141,23 @@ function Dashboard() {
     [sharedIndex, device, allDevices],
   )
 
-  // The same part entered twice on one board stays two rows in the database —
-  // they are real, separate lines with their own designators. But listing them
-  // side by side makes the board look like it holds two stocks of one part, and
-  // the emptier row reads as "none left". Only the first appears at top level;
-  // the rest open underneath it, keeping their own quantity and actions.
+  // One entry per value on a board. Rows sharing a component and value — whether
+  // a straight repeat or the same value in another footprint — stay separate in
+  // the database, keeping their own designators, stock and actions. Only the
+  // first is listed at top level; the rest open beneath it. Listing them side by
+  // side made a board look like it held several stocks of one part, with the
+  // emptier row reading as "none left".
   const displayRows = useMemo(() => {
     const seen = new Set()
     return filtered.filter((c) => {
       const k = sharedKey(c)
       if (!k) return true
-      const info = sharedFor(c)
-      if (!info || info.duplicates.length === 0) return true
       const groupKey = `${c.sub_board}||${k}`
       if (seen.has(groupKey)) return false // already shown, nested under the first
       seen.add(groupKey)
       return true
     })
-  }, [filtered, sharedFor])
+  }, [filtered])
 
   // Matches across all three devices, grouped device -> board. Filters apply here
   // too, so narrowing by type or low stock works the same whether you are

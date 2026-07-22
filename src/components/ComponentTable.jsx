@@ -89,15 +89,16 @@ export default function ComponentTable({
   selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
   sharedFor,
 }) {
-  // which rows have their other-board instances open, by component id
-  const [expanded, setExpanded] = useState(() => new Set())
-  const toggleExpanded = (id) =>
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  // Rows the user has explicitly opened or closed, by component id. Anything not
+  // in here follows the default: a group with siblings on THIS board opens
+  // itself, because those rows are hidden from the list and leaving them behind
+  // a collapsed chip makes the board look like it is missing serial numbers.
+  // Cross-device references stay shut — they are a reference, not part of this board.
+  const [overrides, setOverrides] = useState(() => new Map())
+  const isOpen = (c, shared) =>
+    overrides.has(c.id) ? overrides.get(c.id) : Boolean(shared?.sameBoard?.length)
+  const toggleExpanded = (c, shared) =>
+    setOverrides((prev) => new Map(prev).set(c.id, !isOpen(c, shared)))
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line bg-surface py-16 text-center">
@@ -116,6 +117,8 @@ export default function ComponentTable({
       <ul className="space-y-2 2xl:hidden">
         {rows.map((c) => {
           const chips = valueChips(c)
+          const shared = sharedFor?.(c)
+          const open = isOpen(c, shared)
           return (
             <li
               key={c.id}
@@ -130,11 +133,7 @@ export default function ComponentTable({
                     <span className="font-semibold text-ink">{c.component || '—'}</span>
                   </div>
                   <div className="mt-0.5 text-sm font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
-                  <SharedChip
-                    info={sharedFor?.(c)}
-                    expanded={expanded.has(c.id)}
-                    onClick={() => toggleExpanded(c.id)}
-                  />
+                  <SharedChip info={shared} expanded={open} onClick={() => toggleExpanded(c, shared)} />
                   {chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {chips.map((ch, i) => (
@@ -184,9 +183,9 @@ export default function ComponentTable({
                 </div>
               )}
 
-              {expanded.has(c.id) && (
+              {open && (
                 <ul className="mt-2 space-y-2 border-t border-line2 pt-2.5">
-                  {sharedFor?.(c)?.others.map((o) => (
+                  {shared?.others.map((o) => (
                     <li key={`${o.device}::${o.row.id}`} className="rounded-lg border-l-2 border-l-primary/40 bg-surface2/60 p-2.5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -204,7 +203,12 @@ export default function ComponentTable({
                               {o.row.value || o.row.value_raw || '—'}
                             </span>
                           </div>
-                          {o.row.label && <p className="mt-0.5 break-words text-xs text-faint">{o.row.label}</p>}
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-faint">
+                            {/* the footprint can differ within a group, so it has to be legible */}
+                            <span className="font-mono text-ink/70">{o.row.package || '—'}</span>
+                            {o.row.part_number && <span className="font-mono">{o.row.part_number}</span>}
+                            {o.row.label && <span className="break-words">{o.row.label}</span>}
+                          </div>
                         </div>
                         <div className="shrink-0">
                           {o.qty == null ? (
@@ -262,7 +266,7 @@ export default function ComponentTable({
             {rows.map((c) => {
               const chips = valueChips(c)
               const shared = sharedFor?.(c)
-              const isOpen = expanded.has(c.id)
+              const open = isOpen(c, shared)
               return (
                 <Fragment key={c.id}>
                 <tr
@@ -273,7 +277,7 @@ export default function ComponentTable({
                   <td className={`${td} ${stripeFor(c)} tabular-nums text-faint`}>{c.s_no ?? c.s_no_raw ?? '—'}</td>
                   <td className={td}>
                     <div className="font-semibold text-ink">{c.component || '—'}</div>
-                    <SharedChip info={shared} expanded={isOpen} onClick={() => toggleExpanded(c.id)} />
+                    <SharedChip info={shared} expanded={open} onClick={() => toggleExpanded(c, shared)} />
                   </td>
                   <td className={`${td} max-w-[240px]`}>
                     <div className="font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
@@ -335,7 +339,7 @@ export default function ComponentTable({
                     to rather than in a dialog — it reads as part of this entry,
                     which is what it is. Each keeps its own stock and its own
                     actions, since they are separate rows in separate tables. */}
-                {isOpen && shared?.others.map((o) => (
+                {open && shared?.others.map((o) => (
                   <tr key={`${o.device}::${o.row.id}`} className="bg-surface2/50">
                     <td className={`${td} border-l-2 border-l-primary/40`} />
                     <td className={td} colSpan={2}>
