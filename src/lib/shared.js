@@ -41,6 +41,38 @@ export function buildSharedIndex(allDevices) {
   return map
 }
 
+// Where a part exists across ALL devices, keyed on the part alone. Separate from
+// the board index above: that one groups rows within a list, this one answers
+// "where else do we hold this?" and deliberately reaches past the current tab.
+export function buildCrossIndex(allDevices) {
+  const map = new Map()
+  if (!allDevices) return map
+  for (const [device, bucket] of Object.entries(allDevices)) {
+    for (const c of bucket?.components || []) {
+      const k = sharedKey(c)
+      if (!k) continue
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push({ device, board: c.sub_board, row: c })
+    }
+  }
+  return map
+}
+
+// The devices other than this one that also carry the part, or null if none do.
+export function crossDeviceInfo(index, c, device) {
+  const k = sharedKey(c)
+  if (!k) return null
+  const all = index.get(k)
+  if (!all || all.length < 2) return null
+  const elsewhere = all.filter((l) => l.device !== device)
+  if (elsewhere.length === 0) return null
+  return {
+    all,
+    elsewhere,
+    devices: [...new Set(elsewhere.map((l) => l.device))],
+  }
+}
+
 // The other rows on this board describing the same part, and a label for the chip.
 export function sharedInfo(index, c, device) {
   const k = sharedKey(c)

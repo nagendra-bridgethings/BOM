@@ -66,6 +66,22 @@ function GroupChip({ size, split }) {
   )
 }
 
+// Opens the list of every board, on any device, that carries this part. Separate
+// from GroupChip: that describes rows in this list, this reaches past the tab.
+function CrossDeviceBtn({ info, onClick }) {
+  if (!info) return null
+  return (
+    <button
+      onClick={onClick}
+      title="See every board that uses this part"
+      className="mt-1 inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-medium text-mute transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+    >
+      <IconLayers width={11} height={11} />
+      View · {info.devices.join(', ')}
+    </button>
+  )
+}
+
 // In select mode the checkbox takes the place of the action buttons rather than
 // sitting beside them — the row is already tight on a phone, and a fourth control
 // would push the ⋯ menu out of reach.
@@ -84,7 +100,7 @@ function SelectBox({ checked, onChange, label }) {
 export default function ComponentTable({
   rows, onInward, onOutward, onReturn, onHistory, onEdit, onDelete,
   selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
-  sharedFor,
+  sharedFor, crossFor, onShowShared,
 }) {
   if (rows.length === 0) {
     return (
@@ -127,7 +143,10 @@ export default function ComponentTable({
                   </div>
                   <div className="mt-0.5 text-sm font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
                   {!cont && (
-                    <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
+                    <div className="flex flex-wrap items-center gap-1">
+                      <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
+                      <CrossDeviceBtn info={crossFor?.(c)} onClick={() => onShowShared(c)} />
+                    </div>
                   )}
                   {chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -239,7 +258,10 @@ export default function ComponentTable({
                     ) : (
                       <>
                         <div className="font-semibold text-ink">{c.component || '—'}</div>
-                        <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
+                        <div className="flex flex-wrap items-center gap-1">
+                          <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
+                          <CrossDeviceBtn info={crossFor?.(c)} onClick={() => onShowShared(c)} />
+                        </div>
                       </>
                     )}
                   </td>

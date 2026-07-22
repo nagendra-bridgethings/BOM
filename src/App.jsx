@@ -6,7 +6,7 @@ import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber, matchesQuery } from './lib/format'
-import { buildSharedIndex, sharedInfo, sharedKey } from './lib/shared'
+import { buildSharedIndex, buildCrossIndex, sharedInfo, crossDeviceInfo, sharedKey } from './lib/shared'
 
 import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
@@ -18,6 +18,7 @@ import TransactionModal from './components/TransactionModal'
 import HistoryModal from './components/HistoryModal'
 import CartModal from './components/CartModal'
 import BatchHistoryModal from './components/BatchHistoryModal'
+import SharedPartsModal from './components/SharedPartsModal'
 import { Button } from './components/ui/controls'
 import { IconCart, IconHistory } from './components/ui/icons'
 
@@ -40,6 +41,7 @@ function Dashboard() {
   const [historyComp, setHistoryComp] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [batchesOpen, setBatchesOpen] = useState(false)
+  const [sharedPart, setSharedPart] = useState(null) // { part, locations }
   // bumped after any mutation so the all-device data re-reads
   const [dataVersion, setDataVersion] = useState(0)
 
@@ -133,6 +135,26 @@ function Dashboard() {
     },
     [sharedIndex, device, allDevices],
   )
+
+  // Where a part exists across every device — the "View" button on a row. Kept
+  // apart from the board grouping above: that arranges this list, this answers
+  // where else the part is held, which is the whole point of looking.
+  const crossIndex = useMemo(() => buildCrossIndex(allDevices), [allDevices])
+  const crossFor = useCallback(
+    (c) => crossDeviceInfo(crossIndex, c, device),
+    [crossIndex, device],
+  )
+
+  function showShared(c) {
+    const info = crossFor(c)
+    if (!info) return
+    // enrich every location with its own live stock for the dialog
+    const locations = info.all.map((l) => {
+      const txns = allDevices?.[l.device]?.byComponent?.[l.row.id] || []
+      return { ...l, qty: liveQty(l.row, txns), txnCount: txns.length }
+    })
+    setSharedPart({ part: c, locations })
+  }
 
   // Rows sharing a component and value are brought together so the board reads in
   // groups. Nothing is hidden: every row stays in the list with its own
@@ -537,6 +559,8 @@ function Dashboard() {
                 onToggleSelect={toggleSelect}
                 onToggleAll={toggleAll}
                 sharedFor={sharedFor}
+                crossFor={crossFor}
+                onShowShared={showShared}
               />
               )}
             </>
@@ -567,6 +591,17 @@ function Dashboard() {
       />
 
       <BatchHistoryModal open={batchesOpen} onClose={() => setBatchesOpen(false)} />
+
+      <SharedPartsModal
+        open={Boolean(sharedPart)}
+        onClose={() => setSharedPart(null)}
+        part={sharedPart?.part}
+        locations={sharedPart?.locations || []}
+        currentDevice={device}
+        onGoTo={(d, b) => { setSharedPart(null); handleGoTo(d, b) }}
+        onAddToCart={(d, c) => cart.addMany(d, [c])}
+        inCart={cart.has}
+      />
 
       <CartModal
         open={cartOpen}
