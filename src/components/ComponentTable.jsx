@@ -45,29 +45,7 @@ function rowMenu(c, { onHistory, onEdit, onDelete }) {
 // module-level so the default prop keeps a stable identity between renders
 const EMPTY_SELECTION = new Set()
 
-// Heads a run of rows describing the same part. Not a control — every row in the
-// group is already visible directly beneath it.
-function GroupChip({ size, split }) {
-  if (!size || size < 2) return null
-  return (
-    <span
-      title={
-        split
-          ? 'The same value and footprint is entered more than once, so its stock is split across these rows'
-          : 'The rows below describe the same value in another footprint'
-      }
-      className={`mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ${
-        split ? 'bg-sun/12 text-sun ring-sun/30' : 'bg-primary/8 text-primary ring-primary/25'
-      }`}
-    >
-      <IconLayers width={11} height={11} />
-      {size} on this board
-    </span>
-  )
-}
-
-// Opens the list of every board, on any device, that carries this part. Separate
-// from GroupChip: that describes rows in this list, this reaches past the tab.
+// Opens the list of every board, on any device, that carries this part.
 function CrossDeviceBtn({ info, onClick }) {
   if (!info) return null
   return (
@@ -100,7 +78,7 @@ function SelectBox({ checked, onChange, label }) {
 export default function ComponentTable({
   rows, onInward, onOutward, onReturn, onHistory, onEdit, onDelete,
   selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
-  sharedFor, crossFor, onShowShared,
+  crossFor, onShowShared,
 }) {
   if (rows.length === 0) {
     return (
@@ -142,12 +120,7 @@ export default function ComponentTable({
                     <span className="font-semibold text-ink">{c.component || '—'}</span>
                   </div>
                   <div className="mt-0.5 text-sm font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
-                  {!cont && (
-                    <div className="flex flex-wrap items-center gap-1">
-                      <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
-                      <CrossDeviceBtn info={crossFor?.(c)} onClick={() => onShowShared(c)} />
-                    </div>
-                  )}
+                  {!cont && <CrossDeviceBtn info={crossFor?.(c)} onClick={() => onShowShared(c)} />}
                   {chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {chips.map((ch, i) => (
@@ -258,10 +231,7 @@ export default function ComponentTable({
                     ) : (
                       <>
                         <div className="font-semibold text-ink">{c.component || '—'}</div>
-                        <div className="flex flex-wrap items-center gap-1">
-                          <GroupChip size={c._groupSize} split={sharedFor?.(c)?.duplicates.length > 0} />
-                          <CrossDeviceBtn info={crossFor?.(c)} onClick={() => onShowShared(c)} />
-                        </div>
+                        <CrossDeviceBtn info={crossFor?.(c)} onClick={() => onShowShared(c)} />
                       </>
                     )}
                   </td>

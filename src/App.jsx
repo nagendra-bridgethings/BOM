@@ -6,7 +6,7 @@ import { useAllDevices } from './hooks/useAllDevices'
 import { useCart } from './hooks/useCart'
 import { DEVICES, deviceMeta, orderSubBoards, LOW_STOCK_THRESHOLD } from './lib/constants'
 import { liveQty, distinctValues, formatNumber, matchesQuery } from './lib/format'
-import { buildSharedIndex, buildCrossIndex, sharedInfo, crossDeviceInfo, sharedKey } from './lib/shared'
+import { buildCrossIndex, crossDeviceInfo, sharedKey } from './lib/shared'
 
 import ErrorBoundary from './components/ErrorBoundary'
 import SetupScreen from './components/SetupScreen'
@@ -118,23 +118,6 @@ function Dashboard() {
   // the table need to know what the other devices hold. `dataVersion` re-reads it
   // after a mutation so it can't drift from the device on screen.
   const { data: allDevices, loading: searchLoading, error: searchError } = useAllDevices(true, dataVersion)
-
-  const sharedIndex = useMemo(() => buildSharedIndex(allDevices), [allDevices])
-
-  // Each other location is enriched with its own live stock, so the rows that
-  // expand under a component can show real figures rather than a placeholder.
-  const sharedFor = useCallback(
-    (c) => {
-      const info = sharedInfo(sharedIndex, c, device)
-      if (!info) return null
-      const others = info.others.map((o) => {
-        const txns = allDevices?.[o.device]?.byComponent?.[o.row.id] || []
-        return { ...o, qty: liveQty(o.row, txns), txnCount: txns.length }
-      })
-      return { ...info, others }
-    },
-    [sharedIndex, device, allDevices],
-  )
 
   // Where a part exists across every device — the "View" button on a row. Kept
   // apart from the board grouping above: that arranges this list, this answers
@@ -558,7 +541,6 @@ function Dashboard() {
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onToggleAll={toggleAll}
-                sharedFor={sharedFor}
                 crossFor={crossFor}
                 onShowShared={showShared}
               />
