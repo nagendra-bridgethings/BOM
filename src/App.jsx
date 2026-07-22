@@ -18,7 +18,6 @@ import TransactionModal from './components/TransactionModal'
 import HistoryModal from './components/HistoryModal'
 import CartModal from './components/CartModal'
 import BatchHistoryModal from './components/BatchHistoryModal'
-import SharedPartsModal from './components/SharedPartsModal'
 import { Button } from './components/ui/controls'
 import { IconCart, IconHistory } from './components/ui/icons'
 
@@ -41,7 +40,6 @@ function Dashboard() {
   const [historyComp, setHistoryComp] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [batchesOpen, setBatchesOpen] = useState(false)
-  const [sharedPart, setSharedPart] = useState(null) // { part, locations }
   // bumped after any mutation so the all-device data re-reads
   const [dataVersion, setDataVersion] = useState(0)
 
@@ -120,9 +118,21 @@ function Dashboard() {
   const { data: allDevices, loading: searchLoading, error: searchError } = useAllDevices(true, dataVersion)
 
   const sharedIndex = useMemo(() => buildSharedIndex(allDevices), [allDevices])
+
+  // Each other location is enriched with its own live stock, so the rows that
+  // expand under a component can show real figures rather than a placeholder.
   const sharedFor = useCallback(
-    (c) => sharedInfo(sharedIndex, c, device),
-    [sharedIndex, device],
+    (c) => {
+      const info = sharedInfo(sharedIndex, c, device)
+      if (!info) return null
+      const others = info.others.map((o) => {
+        const bucket = allDevices?.[o.device]
+        const txns = bucket?.byComponent?.[o.row.id] || []
+        return { ...o, qty: bucket ? liveQty(o.row, txns) : null, txnCount: txns.length }
+      })
+      return { ...info, others }
+    },
+    [sharedIndex, device, allDevices],
   )
 
   // Matches across all three devices, grouped device -> board. Filters apply here
@@ -186,23 +196,30 @@ function Dashboard() {
 
   const meta = deviceMeta(device)
 
-  // transaction modal context
+  // Transaction modal context. A row expanded under a shared part belongs to
+  // another device, so the transaction has to be booked against that device's
+  // tables and read that device's history — not whichever tab happens to be open.
   const activeComp = txnState?.component
-  const activeTxns = activeComp ? txnsByComponent[activeComp.id] || [] : []
+  const activeDevice = txnState?.device || device
+  const activeTxns = useMemo(() => {
+    if (!activeComp) return []
+    if (activeDevice === device) return txnsByComponent[activeComp.id] || []
+    return allDevices?.[activeDevice]?.byComponent?.[activeComp.id] || []
+  }, [activeComp, activeDevice, device, txnsByComponent, allDevices])
+
   const activeQty = activeComp ? liveQty(activeComp, activeTxns) : 0
   const openOutwards = useMemo(() => {
     if (!activeComp) return []
-    const txns = txnsByComponent[activeComp.id] || []
-    return txns
+    return activeTxns
       .filter((t) => t.type === 'outward')
       .map((o) => {
-        const returned = txns
+        const returned = activeTxns
           .filter((t) => t.type === 'return' && t.related_txn_id === o.id)
           .reduce((s, t) => s + (Number(t.qty) || 0), 0)
         return { ...o, remaining: (Number(o.qty_sent) || 0) - returned }
       })
       .filter((o) => o.remaining > 0) // fully-returned outwards can't take more returns
-  }, [activeComp, txnsByComponent])
+  }, [activeComp, activeTxns])
 
   // A component can be added to any device, so jump the view to wherever it
   // landed — otherwise the user saves and sees nothing change.
@@ -223,11 +240,6 @@ function Dashboard() {
     setDataVersion((v) => v + 1)
     await reload()
   }, [reload])
-
-  function showShared(c) {
-    const info = sharedFor(c)
-    if (info) setSharedPart({ part: c, locations: info.all })
-  }
 
   // Jump from a search result to where the component actually lives. Clearing the
   // search is what closes the results and reveals the board underneath — the two
@@ -290,8 +302,16 @@ function Dashboard() {
     }
   }
 
-  const historyTxns = historyComp ? txnsByComponent[historyComp.id] || [] : []
-  const historyQty = historyComp ? liveQty(historyComp, historyTxns) : 0
+  // History can be opened on a row belonging to another device, so it reads that
+  // device's transactions rather than the loaded one's.
+  const historyRow = historyComp?.row
+  const historyDevice = historyComp?.device || device
+  const historyTxns = !historyRow
+    ? []
+    : historyDevice === device
+      ? txnsByComponent[historyRow.id] || []
+      : allDevices?.[historyDevice]?.byComponent?.[historyRow.id] || []
+  const historyQty = historyRow ? liveQty(historyRow, historyTxns) : 0
 
   const hasData = components.length > 0
 
@@ -483,10 +503,10 @@ function Dashboard() {
               ) : (
               <ComponentTable
                 rows={filtered}
-                onInward={(c) => setTxnState({ mode: 'inward', component: c })}
-                onOutward={(c) => setTxnState({ mode: 'outward', component: c })}
-                onReturn={(c) => setTxnState({ mode: 'return', component: c })}
-                onHistory={(c) => setHistoryComp(c)}
+                onInward={(c, d) => setTxnState({ mode: 'inward', component: c, device: d || device })}
+                onOutward={(c, d) => setTxnState({ mode: 'outward', component: c, device: d || device })}
+                onReturn={(c, d) => setTxnState({ mode: 'return', component: c, device: d || device })}
+                onHistory={(c, d) => setHistoryComp({ row: c, device: d || device })}
                 onEdit={(c) => { setFormInitial(c); setFormOpen(true) }}
                 onDelete={handleDelete}
                 selectMode={selectMode}
@@ -494,7 +514,6 @@ function Dashboard() {
                 onToggleSelect={toggleSelect}
                 onToggleAll={toggleAll}
                 sharedFor={sharedFor}
-                onShowShared={showShared}
               />
               )}
             </>
@@ -517,7 +536,7 @@ function Dashboard() {
         open={Boolean(txnState)}
         onClose={() => setTxnState(null)}
         onSaved={refreshAll}
-        device={device}
+        device={activeDevice}
         mode={txnState?.mode}
         component={activeComp}
         currentQty={activeQty}
@@ -525,17 +544,6 @@ function Dashboard() {
       />
 
       <BatchHistoryModal open={batchesOpen} onClose={() => setBatchesOpen(false)} />
-
-      <SharedPartsModal
-        open={Boolean(sharedPart)}
-        onClose={() => setSharedPart(null)}
-        part={sharedPart?.part}
-        locations={sharedPart?.locations || []}
-        stock={allDevices}
-        onGoTo={(d, b) => { setSharedPart(null); handleGoTo(d, b) }}
-        onAddToCart={(d, c) => cart.addMany(d, [c])}
-        inCart={cart.has}
-      />
 
       <CartModal
         open={cartOpen}
@@ -550,8 +558,8 @@ function Dashboard() {
         open={Boolean(historyComp)}
         onClose={() => setHistoryComp(null)}
         onChanged={refreshAll}
-        device={device}
-        component={historyComp}
+        device={historyDevice}
+        component={historyRow}
         txns={historyTxns}
         currentQty={historyQty}
       />

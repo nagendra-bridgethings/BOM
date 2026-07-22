@@ -1,8 +1,9 @@
+import { Fragment, useState } from 'react'
 import QtyBadge from './QtyBadge'
 import Menu from './ui/Menu'
 import { valueChips } from '../lib/format'
 import { LOW_STOCK_THRESHOLD } from '../lib/constants'
-import { IconInward, IconOutward, IconReturn, IconHistory, IconEdit, IconTrash, IconLayers } from './ui/icons'
+import { IconInward, IconOutward, IconReturn, IconHistory, IconEdit, IconTrash, IconLayers, IconChevronDown } from './ui/icons'
 
 // Labelled stock-movement button. Direction colour lives on the icon
 // (teal = inward, coral = outward, neutral = return) so it reads at a glance.
@@ -46,14 +47,15 @@ function rowMenu(c, { onHistory, onEdit, onDelete }) {
 const EMPTY_SELECTION = new Set()
 
 // Marks a part that exists on other boards too, and opens the list of them.
-function SharedChip({ info, onClick }) {
+function SharedChip({ info, expanded, onClick }) {
   if (!info) return null
   // a split listing on one board is a data problem, not just a cross-reference
   const dupe = info.duplicates.length > 0
   return (
     <button
       onClick={onClick}
-      title={dupe ? 'Stock for this part is split across more than one row' : 'See every board that uses this part'}
+      aria-expanded={expanded}
+      title={dupe ? 'Stock for this part is split across more than one row' : 'Show the other boards that use this part'}
       className={`mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 transition ${
         dupe
           ? 'bg-sun/12 text-sun ring-sun/30 hover:bg-sun/20'
@@ -62,6 +64,7 @@ function SharedChip({ info, onClick }) {
     >
       <IconLayers width={11} height={11} />
       {info.label}
+      <IconChevronDown width={11} height={11} className={expanded ? 'rotate-180' : ''} />
     </button>
   )
 }
@@ -84,8 +87,17 @@ function SelectBox({ checked, onChange, label }) {
 export default function ComponentTable({
   rows, onInward, onOutward, onReturn, onHistory, onEdit, onDelete,
   selectMode = false, selectedIds = EMPTY_SELECTION, onToggleSelect, onToggleAll,
-  sharedFor, onShowShared,
+  sharedFor,
 }) {
+  // which rows have their other-board instances open, by component id
+  const [expanded, setExpanded] = useState(() => new Set())
+  const toggleExpanded = (id) =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line bg-surface py-16 text-center">
@@ -118,7 +130,11 @@ export default function ComponentTable({
                     <span className="font-semibold text-ink">{c.component || '—'}</span>
                   </div>
                   <div className="mt-0.5 text-sm font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
-                  <SharedChip info={sharedFor?.(c)} onClick={() => onShowShared(c)} />
+                  <SharedChip
+                    info={sharedFor?.(c)}
+                    expanded={expanded.has(c.id)}
+                    onClick={() => toggleExpanded(c.id)}
+                  />
                   {chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {chips.map((ch, i) => (
@@ -167,6 +183,39 @@ export default function ComponentTable({
                   <Menu items={rowMenu(c, handlers)} />
                 </div>
               )}
+
+              {expanded.has(c.id) && (
+                <ul className="mt-2 space-y-2 border-t border-line2 pt-2.5">
+                  {sharedFor?.(c)?.others.map((o) => (
+                    <li key={`${o.device}::${o.row.id}`} className="rounded-lg border-l-2 border-l-primary/40 bg-surface2/60 p-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="text-sm font-medium text-ink">{o.device}</span>
+                            <span className="text-xs text-mute">{o.board}</span>
+                            <span className="text-xs tabular-nums text-faint">
+                              #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
+                            </span>
+                          </div>
+                          {o.row.label && <p className="mt-0.5 break-words text-xs text-faint">{o.row.label}</p>}
+                        </div>
+                        <div className="shrink-0">
+                          {o.qty == null ? (
+                            <span className="text-xs text-faint">…</span>
+                          ) : (
+                            <QtyBadge qty={o.qty} note={o.row.quantity_note} hasActivity={o.txnCount > 0} />
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <MoveBtn label="Inward" tone="teal" className="flex-1" onClick={() => onInward(o.row, o.device)}><IconInward width={14} height={14} /></MoveBtn>
+                        <MoveBtn label="Outward" tone="coral" className="flex-1" onClick={() => onOutward(o.row, o.device)}><IconOutward width={14} height={14} /></MoveBtn>
+                        <MoveBtn label="Return" tone="neutral" className="flex-1" onClick={() => onReturn(o.row, o.device)}><IconReturn width={14} height={14} /></MoveBtn>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           )
         })}
@@ -205,9 +254,11 @@ export default function ComponentTable({
           <tbody className="divide-y divide-line2">
             {rows.map((c) => {
               const chips = valueChips(c)
+              const shared = sharedFor?.(c)
+              const isOpen = expanded.has(c.id)
               return (
+                <Fragment key={c.id}>
                 <tr
-                  key={c.id}
                   className={`transition ${
                     selectMode && selectedIds.has(c.id) ? 'bg-primary/5' : 'hover:bg-surface2/70'
                   }`}
@@ -215,7 +266,7 @@ export default function ComponentTable({
                   <td className={`${td} ${stripeFor(c)} tabular-nums text-faint`}>{c.s_no ?? c.s_no_raw ?? '—'}</td>
                   <td className={td}>
                     <div className="font-semibold text-ink">{c.component || '—'}</div>
-                    <SharedChip info={sharedFor?.(c)} onClick={() => onShowShared(c)} />
+                    <SharedChip info={shared} expanded={isOpen} onClick={() => toggleExpanded(c.id)} />
                   </td>
                   <td className={`${td} max-w-[240px]`}>
                     <div className="font-medium text-ink/90">{c.value || c.value_raw || '—'}</div>
@@ -272,6 +323,65 @@ export default function ComponentTable({
                     </div>
                   </td>
                 </tr>
+
+                {/* The same part on other boards, opened under the row it belongs
+                    to rather than in a dialog — it reads as part of this entry,
+                    which is what it is. Each keeps its own stock and its own
+                    actions, since they are separate rows in separate tables. */}
+                {isOpen && shared?.others.map((o) => (
+                  <tr key={`${o.device}::${o.row.id}`} className="bg-surface2/50">
+                    <td className={`${td} border-l-2 border-l-primary/40`} />
+                    <td className={td} colSpan={3}>
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="text-faint">↳</span>
+                        <span className="text-sm font-medium text-ink">{o.device}</span>
+                        <span className="text-sm text-mute">{o.board}</span>
+                        <span className="text-xs tabular-nums text-faint">
+                          #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
+                        </span>
+                        {o.row.label && <span className="text-xs text-faint">{o.row.label}</span>}
+                      </div>
+                    </td>
+                    <td className={td}>
+                      <span className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink/80 ring-1 ring-line2">
+                        {o.row.package || '—'}
+                      </span>
+                    </td>
+                    <td className={td}>
+                      <span className="font-mono text-xs text-mute">{o.row.part_number || '—'}</span>
+                    </td>
+                    <td className={td}>
+                      <span className="font-mono text-xs text-mute">{o.row.identification_number || '—'}</span>
+                    </td>
+                    <td className={td}>
+                      {o.row.supply_form ? (
+                        <span className="whitespace-nowrap rounded bg-surface px-1.5 py-0.5 text-[11px] text-mute ring-1 ring-line2">
+                          {o.row.supply_form}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-faint">—</span>
+                      )}
+                    </td>
+                    <td className={`${td} text-right`}>
+                      {o.qty == null ? (
+                        <span className="text-xs text-faint">…</span>
+                      ) : (
+                        <QtyBadge qty={o.qty} note={o.row.quantity_note} hasActivity={o.txnCount > 0} />
+                      )}
+                    </td>
+                    <td className={`${td} pr-3`}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <MoveBtn label="Inward" tone="teal" onClick={() => onInward(o.row, o.device)}><IconInward width={14} height={14} /></MoveBtn>
+                        <MoveBtn label="Outward" tone="coral" onClick={() => onOutward(o.row, o.device)}><IconOutward width={14} height={14} /></MoveBtn>
+                        <MoveBtn label="Return" tone="neutral" onClick={() => onReturn(o.row, o.device)}><IconReturn width={14} height={14} /></MoveBtn>
+                        <Menu items={[
+                          { label: 'History', icon: <IconHistory width={15} height={15} />, onClick: () => onHistory(o.row, o.device) },
+                        ]} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                </Fragment>
               )
             })}
           </tbody>
