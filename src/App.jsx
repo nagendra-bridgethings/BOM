@@ -126,15 +126,8 @@ function Dashboard() {
       const info = sharedInfo(sharedIndex, c, device)
       if (!info) return null
       const others = info.others.map((o) => {
-        const bucket = allDevices?.[o.device]
-        const txns = bucket?.byComponent?.[o.row.id] || []
-        return {
-          ...o,
-          // a twin on this very board needs no device/board caption repeating
-          sameBoard: o.device === device && o.board === c.sub_board,
-          qty: bucket ? liveQty(o.row, txns) : null,
-          txnCount: txns.length,
-        }
+        const txns = allDevices?.[o.device]?.byComponent?.[o.row.id] || []
+        return { ...o, qty: liveQty(o.row, txns), txnCount: txns.length }
       })
       return { ...info, others }
     },

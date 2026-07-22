@@ -90,13 +90,11 @@ export default function ComponentTable({
   sharedFor,
 }) {
   // Rows the user has explicitly opened or closed, by component id. Anything not
-  // in here follows the default: a group with siblings on THIS board opens
-  // itself, because those rows are hidden from the list and leaving them behind
-  // a collapsed chip makes the board look like it is missing serial numbers.
-  // Cross-device references stay shut — they are a reference, not part of this board.
+  // in here opens by default: every nested row is a row taken out of this list,
+  // so leaving them behind a collapsed chip makes the board look like it is
+  // missing serial numbers.
   const [overrides, setOverrides] = useState(() => new Map())
-  const isOpen = (c, shared) =>
-    overrides.has(c.id) ? overrides.get(c.id) : Boolean(shared?.sameBoard?.length)
+  const isOpen = (c, shared) => (overrides.has(c.id) ? overrides.get(c.id) : Boolean(shared))
   const toggleExpanded = (c, shared) =>
     setOverrides((prev) => new Map(prev).set(c.id, !isOpen(c, shared)))
   if (rows.length === 0) {
@@ -190,12 +188,6 @@ export default function ComponentTable({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-baseline gap-x-2">
-                            {!o.sameBoard && (
-                              <>
-                                <span className="text-sm font-medium text-ink">{o.device}</span>
-                                <span className="text-xs text-mute">{o.board}</span>
-                              </>
-                            )}
                             <span className="text-xs tabular-nums text-faint">
                               #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
                             </span>
@@ -345,14 +337,6 @@ export default function ComponentTable({
                     <td className={td} colSpan={2}>
                       <div className="flex flex-wrap items-baseline gap-x-2">
                         <span className="text-faint">↳</span>
-                        {/* a twin on this same board only needs its serial — repeating
-                            the device and board it shares with the row above is noise */}
-                        {!o.sameBoard && (
-                          <>
-                            <span className="text-sm font-medium text-ink">{o.device}</span>
-                            <span className="text-sm text-mute">{o.board}</span>
-                          </>
-                        )}
                         <span className="text-xs tabular-nums text-faint">
                           #{o.row.s_no ?? o.row.s_no_raw ?? '—'}
                         </span>
